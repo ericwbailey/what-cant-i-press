@@ -4,6 +4,14 @@
   "description": "Menu-bar app that audits reserved keyboard shortcuts across the OS and running apps.",
   "main": "./out/main/index.js",
   "author": "Eric Bailey",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ericwbailey/what-cant-i-press.git"
+  },
+  "homepage": "https://github.com/ericwbailey/what-cant-i-press#readme",
+  "bugs": {
+    "url": "https://github.com/ericwbailey/what-cant-i-press/issues"
+  },
   "license": "MIT",
   "private": true,
   "scripts": {

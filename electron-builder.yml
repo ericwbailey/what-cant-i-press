@@ -6,18 +6,24 @@ directories:
 files:
   - out/**/*
   - package.json
+# Helper binaries live outside the asar so they can be executed directly.
 extraResources:
   - from: resources/bin
     to: bin
     filter:
       - "**/*"
-asarUnpack:
-  - resources/bin/**
 mac:
   category: public.app-category.utilities
   target:
     - dmg
     - zip
+  # Sign under the hardened runtime so the build can be notarized. The
+  # entitlements below allow the embedded helper to load and to send the
+  # Apple events it uses to activate apps and read their menus.
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
   # LSUIElement hides the Dock icon so the app lives only in the menu bar.
   extendInfo:
     LSUIElement: 1
