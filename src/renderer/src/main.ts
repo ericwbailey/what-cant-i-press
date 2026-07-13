@@ -1,4 +1,5 @@
 import './styles.css'
+import type { ScanResult } from '@shared/scan'
 
 const root = document.getElementById('app')
 if (!root) throw new Error('missing #app root')
@@ -11,7 +12,7 @@ root.innerHTML = `
     </div>
     <button class="primary" id="scan">Scan</button>
   </header>
-  <main>
+  <main id="content">
     <div class="empty-state">
       <div class="glyph">\u2328</div>
       <div>No scan yet. Press <strong>Scan</strong> to audit reserved shortcuts.</div>
@@ -20,13 +21,29 @@ root.innerHTML = `
 `
 
 const scanButton = document.getElementById('scan') as HTMLButtonElement
+const content = document.getElementById('content') as HTMLElement
+
+function renderResult(result: ScanResult): void {
+  const notes = result.notes.length
+    ? `<ul>${result.notes.map((n) => `<li>${n}</li>`).join('')}</ul>`
+    : ''
+  content.innerHTML = `
+    <p>${result.shortcuts.length} reserved shortcut(s) across ${result.appsScanned} app(s).</p>
+    <p>Accessibility: ${result.permission.accessibility}</p>
+    ${notes}
+  `
+}
+
+window.shortcutApi.onScanProgress((progress) => {
+  scanButton.textContent = progress.phase === 'done' ? 'Scan' : 'Scanning\u2026'
+})
 
 scanButton.addEventListener('click', async () => {
   scanButton.disabled = true
   scanButton.textContent = 'Scanning\u2026'
   try {
-    // Phase 0 smoke test of the preload bridge; replaced by real scan later.
-    await window.shortcutApi.ping()
+    const result = await window.shortcutApi.scan({ scanAllApps: false })
+    renderResult(result)
   } finally {
     scanButton.disabled = false
     scanButton.textContent = 'Scan'

@@ -1,9 +1,9 @@
-export interface ShortcutApi {
-  ping: () => Promise<string>
-}
+import type { ShortcutApi } from '@shared/ipc'
 
 declare global {
   interface Window {
     shortcutApi: ShortcutApi
   }
 }
+
+export {}

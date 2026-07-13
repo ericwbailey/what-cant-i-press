@@ -1,6 +1,7 @@
-import { app, Tray, ipcMain, type BrowserWindow } from 'electron'
+import { app, Tray, type BrowserWindow } from 'electron'
 import { createTrayIcon } from './icon'
 import { createPopoverWindow, positionPopover } from './window'
+import { registerIpc } from './ipc'
 
 let tray: Tray | null = null
 let popover: BrowserWindow | null = null
@@ -16,15 +17,11 @@ function togglePopover(): void {
   popover.focus()
 }
 
-function registerIpc(): void {
-  ipcMain.handle('app:ping', () => 'pong')
-}
-
 app.whenReady().then(() => {
   // Menu-bar-only app: no Dock icon on macOS.
   if (process.platform === 'darwin') app.dock?.hide()
 
-  registerIpc()
+  registerIpc(() => popover)
 
   popover = createPopoverWindow()
 
