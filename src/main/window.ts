@@ -5,6 +5,12 @@ const POPOVER_WIDTH = 460
 const POPOVER_HEIGHT = 620
 
 /**
+ * Shared popover state. `suppressHide` keeps the window visible during a full
+ * scan, when activating other apps would otherwise blur and hide it.
+ */
+export const popoverState = { suppressHide: false }
+
+/**
  * Creates the frameless popover window that hangs off the tray icon. The window
  * starts hidden and is shown/positioned on demand.
  */
@@ -30,6 +36,7 @@ export function createPopoverWindow(): BrowserWindow {
   })
 
   win.on('blur', () => {
+    if (popoverState.suppressHide) return
     if (!win.webContents.isDevToolsOpened()) win.hide()
   })
 
@@ -41,6 +48,17 @@ export function createPopoverWindow(): BrowserWindow {
   }
 
   return win
+}
+
+/**
+ * Toggles "scanning" mode on the popover: while active, the window floats above
+ * other apps and does not hide on blur, so the user can watch progress as each
+ * app is briefly activated.
+ */
+export function setScanning(win: BrowserWindow, scanning: boolean): void {
+  popoverState.suppressHide = scanning
+  win.setAlwaysOnTop(scanning, 'floating')
+  if (scanning && !win.isVisible()) win.show()
 }
 
 /**
