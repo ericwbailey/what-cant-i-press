@@ -1,0 +1,29 @@
+{
+  "name": "what-cant-i-press",
+  "version": "0.1.0",
+  "description": "Menu-bar app that audits reserved keyboard shortcuts across the OS and running apps.",
+  "main": "./out/main/index.js",
+  "author": "Eric Bailey",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "npm run typecheck && electron-vite build",
+    "preview": "electron-vite preview",
+    "start": "electron-vite preview",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "build:helper:mac": "bash native/macos/build.sh",
+    "build:mac": "npm run build && npm run build:helper:mac && electron-builder --mac",
+    "build:win": "npm run build && electron-builder --win"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "electron": "^43.1.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.6"
+  }
+}

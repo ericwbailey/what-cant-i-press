@@ -1,0 +1,31 @@
+appId: com.ericwbailey.whatcantipress
+productName: What Can't I Press
+directories:
+  buildResources: build
+  output: dist
+files:
+  - out/**/*
+  - package.json
+extraResources:
+  - from: resources/bin
+    to: bin
+    filter:
+      - "**/*"
+asarUnpack:
+  - resources/bin/**
+mac:
+  category: public.app-category.utilities
+  target:
+    - dmg
+    - zip
+  # LSUIElement hides the Dock icon so the app lives only in the menu bar.
+  extendInfo:
+    LSUIElement: 1
+    NSAppleEventsUsageDescription: This app reads menu keyboard shortcuts from running applications.
+win:
+  target:
+    - nsis
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true

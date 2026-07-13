@@ -1,0 +1,13 @@
+node_modules/
+out/
+dist/
+*.log
+.DS_Store
+
+# Native helper build artifacts
+native/macos/.build/
+resources/bin/
+
+# Editor
+.vscode/
+.idea/
