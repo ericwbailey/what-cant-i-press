@@ -15,8 +15,9 @@
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "build:helper:mac": "bash native/macos/build.sh",
+    "build:helper:win": "pwsh -File native/windows/build.ps1",
     "build:mac": "npm run build && npm run build:helper:mac && electron-builder --mac",
-    "build:win": "npm run build && electron-builder --win"
+    "build:win": "npm run build && npm run build:helper:win && electron-builder --win"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
