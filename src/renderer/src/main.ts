@@ -63,11 +63,7 @@ root.innerHTML = `
       <h1>What Can't I Press</h1>
       <div class="subtitle">Reserved keyboard shortcuts</div>
     </div>
-    <div class="actions">
-      <button class="secondary" id="scan-all">Scan all apps</button>
-      <button class="primary" id="scan">Scan current app</button>
-      <button class="ghost" id="cancel" hidden>Cancel</button>
-    </div>
+    <button class="ghost" id="quit" data-tip="Quit What Can't I Press">Quit</button>
   </header>
   <div class="toolbar">
     <input id="search" type="search" placeholder="Filter by combo, app, or action" autocomplete="off" spellcheck="false" />
@@ -81,8 +77,12 @@ root.innerHTML = `
     </div>
   </main>
   <footer>
+    <div class="actions">
+      <button class="secondary" id="scan-all">Scan all apps</button>
+      <button class="primary" id="scan">Scan current app</button>
+      <button class="ghost" id="cancel" hidden>Cancel</button>
+    </div>
     <button class="secondary" id="export" hidden disabled>Export JSON</button>
-    <button class="ghost" id="quit" data-tip="Quit What Can't I Press">Quit</button>
   </footer>
   <div class="toast" id="toast" hidden>Copied</div>
   <div class="tip" id="tip" role="tooltip" hidden></div>
@@ -243,13 +243,7 @@ function renderResult(): void {
     )
   ).join('')
 
-  const notes = lastResult.notes.length
-    ? `<section class="notes"><h2>Notes</h2><ul>${lastResult.notes
-        .map((n) => `<li>${escapeHtml(n)}</li>`)
-        .join('')}</ul></section>`
-    : ''
-
-  content.innerHTML = sections + notes
+  content.innerHTML = sections
 }
 
 function showToast(message = 'Copied'): void {
@@ -272,8 +266,8 @@ function showTip(target: HTMLElement): void {
   const box = tip.getBoundingClientRect()
   let left = anchor.left + anchor.width / 2 - box.width / 2
   left = Math.max(6, Math.min(left, window.innerWidth - box.width - 6))
-  let top = anchor.top - box.height - 6
-  if (top < 6) top = anchor.bottom + 6
+  let top = anchor.top - box.height - 4
+  if (top < 6) top = anchor.bottom + 4
   tip.style.left = `${left}px`
   tip.style.top = `${top}px`
   tip.classList.add('show')

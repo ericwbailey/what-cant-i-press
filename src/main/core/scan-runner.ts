@@ -25,7 +25,6 @@ function delay(ms: number): Promise<void> {
 async function scanFrontmostOnly(
   provider: PlatformProvider,
   onProgress: ProgressReporter,
-  notes: string[],
   cancel: Cancellation
 ): Promise<{ raws: RawShortcut[]; appsScanned: number }> {
   if (cancel.cancelled) return { raws: [], appsScanned: 0 }
@@ -37,7 +36,6 @@ async function scanFrontmostOnly(
     const raws = await provider.readAppMenuShortcuts(frontmost)
     return { raws, appsScanned: 1 }
   } catch {
-    notes.push(`Could not read menus for ${frontmost.name}.`)
     return { raws: [], appsScanned: 0 }
   }
 }
@@ -51,7 +49,6 @@ async function scanAllApps(
   provider: PlatformProvider,
   apps: RunningApp[],
   onProgress: ProgressReporter,
-  notes: string[],
   cancel: Cancellation
 ): Promise<{ raws: RawShortcut[]; appsScanned: number }> {
   const raws: RawShortcut[] = []
@@ -63,10 +60,7 @@ async function scanAllApps(
 
   try {
     for (let i = 0; i < targets.length; i++) {
-      if (cancel.cancelled) {
-        notes.push('Scan cancelled; results are partial.')
-        break
-      }
+      if (cancel.cancelled) break
       const app = targets[i]
       onProgress({ phase: 'apps', current: i + 1, total, appName: app.name })
 
@@ -76,7 +70,7 @@ async function scanAllApps(
         raws.push(...(await provider.readAppMenuShortcuts(app)))
         appsScanned++
       } catch {
-        notes.push(`Could not read menus for ${app.name}.`)
+        // Skip apps whose menus cannot be read.
       }
     }
   } finally {
@@ -84,7 +78,7 @@ async function scanAllApps(
       try {
         await provider.activateApp(originalFront)
       } catch {
-        notes.push('Could not restore the previously focused app.')
+        // Best-effort restore of the previously focused app.
       }
     }
   }
@@ -102,7 +96,6 @@ export async function runScan(
   onProgress: ProgressReporter,
   cancel: Cancellation
 ): Promise<ScanResult> {
-  const notes: string[] = []
   const raws: RawShortcut[] = []
   onProgress({ phase: 'starting' })
 
@@ -112,7 +105,7 @@ export async function runScan(
   try {
     raws.push(...(await provider.readOsShortcuts()))
   } catch {
-    notes.push('Could not read operating-system shortcuts.')
+    // OS shortcut source unavailable; continue with app + curated data.
   }
 
   const apps = await provider.listRunningApps()
@@ -121,14 +114,10 @@ export async function runScan(
   if (!cancel.cancelled) {
     const result =
       options.scanAllApps && apps.length > 0
-        ? await scanAllApps(provider, apps, onProgress, notes, cancel)
-        : await scanFrontmostOnly(provider, onProgress, notes, cancel)
+        ? await scanAllApps(provider, apps, onProgress, cancel)
+        : await scanFrontmostOnly(provider, onProgress, cancel)
     raws.push(...result.raws)
     appsScanned = result.appsScanned
-
-    if (!options.scanAllApps) {
-      notes.push('Only the frontmost app was scanned. Run a full scan to include every app.')
-    }
   }
 
   onProgress({ phase: 'curated' })
@@ -143,7 +132,6 @@ export async function runScan(
     platform: provider.platform,
     permission,
     shortcuts,
-    appsScanned,
-    notes
+    appsScanned
   }
 }

@@ -31,6 +31,4 @@ export interface ScanResult {
   permission: PermissionStatus
   shortcuts: Shortcut[]
   appsScanned: number
-  /** Non-fatal notes surfaced to the user (limitations, skipped apps, etc.). */
-  notes: string[]
 }
