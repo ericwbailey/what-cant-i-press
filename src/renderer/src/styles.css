@@ -266,6 +266,13 @@ kbd {
   white-space: nowrap;
 }
 
+.combo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1px;
+}
+
 .desc {
   min-width: 0;
   font-size: 12px;

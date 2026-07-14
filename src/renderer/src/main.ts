@@ -144,10 +144,11 @@ function renderRow(shortcut: Shortcut, platform: Platform): string {
   const disabled = shortcut.enabled === false ? ' <span class="off">(disabled)</span>' : ''
   const desc = shortcut.description ? escapeHtml(shortcut.description) : '<span class="dim">—</span>'
   const fullName = escapeHtml(fullComboName(shortcut, platform))
-  const sep = platform === 'darwin' ? '&#8201;' : '+'
-  const combo = comboTokens(shortcut.key, shortcut.modifiers, platform)
-    .map(escapeHtml)
-    .join(sep)
+  const tokens = comboTokens(shortcut.key, shortcut.modifiers, platform)
+  const combo =
+    platform === 'darwin'
+      ? `<div class="combo">${tokens.map((t) => `<span>${escapeHtml(t)}</span>`).join('')}</div>`
+      : escapeHtml(tokens.join('+'))
   return `
     <li class="row" data-combo="${escapeHtml(shortcut.comboLabel)}">
       <kbd data-tip="${fullName}">${combo}</kbd>
