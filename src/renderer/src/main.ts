@@ -133,11 +133,8 @@ function matchesQuery(shortcut: Shortcut, query: string): boolean {
 }
 
 function badge(source: Shortcut['source']): string {
-  const tipText =
-    source === 'curated'
-      ? 'Curated default — the app may have remapped this'
-      : 'Detected live from this app or the OS'
-  return `<span class="badge badge-${source}" data-tip="${escapeHtml(tipText)}">${source}</span>`
+  if (source !== 'curated') return ''
+  return `<span class="help-badge" data-tip="Built-in guess" role="img" aria-label="Built-in guess">?</span>`
 }
 
 function renderRow(shortcut: Shortcut, platform: Platform): string {
