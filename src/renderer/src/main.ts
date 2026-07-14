@@ -9,7 +9,7 @@ import {
   type ShortcutSegment
 } from '@shared/shortcuts'
 
-const SEGMENT_ORDER: ShortcutSegment[] = ['global-os', 'global-app', 'focused-menu']
+const SEGMENT_ORDER: ShortcutSegment[] = ['global-app', 'focused-menu', 'global-os']
 
 const MOD_FULL_MAC: Record<Modifier, string> = {
   function: 'Function',

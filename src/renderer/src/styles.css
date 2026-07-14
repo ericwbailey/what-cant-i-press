@@ -196,13 +196,13 @@ details[open] > .segment-head .caret {
 .segment-head h2 {
   font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-dim);
   margin: 0;
 }
 
 .count {
+  margin-left: auto;
   font-size: 10px;
   font-weight: 600;
   color: var(--text-dim);
