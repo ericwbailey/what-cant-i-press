@@ -4,6 +4,7 @@ import { IPC } from '@shared/ipc'
 import type { ScanOptions } from '@shared/scan'
 import { getProvider } from './providers'
 import { runScan, type Cancellation } from './core/scan-runner'
+import { foreground } from './core/foreground'
 import { popoverState, setScanning } from './window'
 
 const ALLOWED_EXTERNAL = /^(https?:|x-apple\.systempreferences:|ms-settings:)/i
@@ -53,7 +54,8 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
         provider,
         effectiveOptions,
         (progress) => getWindow()?.webContents.send(IPC.scanProgress, progress),
-        cancel
+        cancel,
+        foreground.app
       )
     } finally {
       if (sweeping && win) setScanning(win, false)

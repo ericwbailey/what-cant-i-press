@@ -19,16 +19,19 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
- * Reads the frontmost app's menus only (quick, non-disruptive). Returns the raw
- * shortcuts collected and the number of apps scanned.
+ * Reads the target app's menus only (quick, non-disruptive). The target is the
+ * app that was frontmost when the popover opened (`currentApp`); falls back to
+ * the live frontmost app when no capture is available. Reading is by pid via
+ * Accessibility and does not require the app to be frontmost, so nothing flashes.
  */
 async function scanFrontmostOnly(
   provider: PlatformProvider,
   onProgress: ProgressReporter,
-  cancel: Cancellation
+  cancel: Cancellation,
+  currentApp?: RunningApp | null
 ): Promise<{ raws: RawShortcut[]; appsScanned: number }> {
   if (cancel.cancelled) return { raws: [], appsScanned: 0 }
-  const frontmost = await provider.getFrontmostApp()
+  const frontmost = currentApp ?? (await provider.getFrontmostApp())
   if (!frontmost) return { raws: [], appsScanned: 0 }
 
   onProgress({ phase: 'apps', current: 1, total: 1, appName: frontmost.name })
@@ -49,12 +52,13 @@ async function scanAllApps(
   provider: PlatformProvider,
   apps: RunningApp[],
   onProgress: ProgressReporter,
-  cancel: Cancellation
+  cancel: Cancellation,
+  restoreTo?: RunningApp | null
 ): Promise<{ raws: RawShortcut[]; appsScanned: number }> {
   const raws: RawShortcut[] = []
   let appsScanned = 0
 
-  const originalFront = await provider.getFrontmostApp()
+  const originalFront = restoreTo ?? (await provider.getFrontmostApp())
   const targets = apps.filter((app) => app.pid !== process.pid && app.hasMenu !== false)
   const total = targets.length
 
@@ -94,7 +98,8 @@ export async function runScan(
   provider: PlatformProvider,
   options: ScanOptions,
   onProgress: ProgressReporter,
-  cancel: Cancellation
+  cancel: Cancellation,
+  currentApp?: RunningApp | null
 ): Promise<ScanResult> {
   const raws: RawShortcut[] = []
   onProgress({ phase: 'starting' })
@@ -114,8 +119,8 @@ export async function runScan(
   if (!cancel.cancelled) {
     const result =
       options.scanAllApps && apps.length > 0
-        ? await scanAllApps(provider, apps, onProgress, cancel)
-        : await scanFrontmostOnly(provider, onProgress, cancel)
+        ? await scanAllApps(provider, apps, onProgress, cancel, currentApp)
+        : await scanFrontmostOnly(provider, onProgress, cancel, currentApp)
     raws.push(...result.raws)
     appsScanned = result.appsScanned
   }

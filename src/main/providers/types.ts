@@ -26,7 +26,11 @@ export interface PlatformProvider {
   /** Reads OS-reserved shortcuts (macOS symbolic hotkeys / curated Windows list). */
   readOsShortcuts(): Promise<RawShortcut[]>
 
-  /** Reads menu-bar accelerators for a specific app (requires it be frontmost). */
+  /**
+   * Reads menu-bar accelerators for a specific app by pid via Accessibility. The
+   * app does not need to be frontmost — its menus are already populated — so this
+   * reads the last-focused app without activating it.
+   */
   readAppMenuShortcuts(app: RunningApp): Promise<RawShortcut[]>
 
   /** Returns the currently frontmost app, or null if it can't be determined. */
