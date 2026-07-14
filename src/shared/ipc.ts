@@ -8,7 +8,8 @@ export const IPC = {
   permissionStatus: 'shortcuts:permission-status',
   requestPermission: 'shortcuts:request-permission',
   openExternal: 'app:open-external',
-  quit: 'app:quit'
+  quit: 'app:quit',
+  exportJson: 'app:export-json'
 } as const
 
 /** The typed surface exposed to the renderer via the preload bridge. */
@@ -20,4 +21,6 @@ export interface ShortcutApi {
   requestPermission(): Promise<PermissionStatus>
   openExternal(url: string): Promise<void>
   quit(): Promise<void>
+  /** Writes the given JSON to a user-chosen file. Resolves true when saved. */
+  exportJson(json: string): Promise<boolean>
 }

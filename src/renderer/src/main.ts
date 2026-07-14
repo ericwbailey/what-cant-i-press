@@ -19,7 +19,7 @@ root.innerHTML = `
     </div>
     <div class="actions">
       <button class="secondary" id="scan-all">Scan all apps</button>
-      <button class="primary" id="scan">Scan</button>
+      <button class="primary" id="scan">Scan current app</button>
       <button class="ghost" id="cancel" hidden>Cancel</button>
     </div>
   </header>
@@ -35,7 +35,7 @@ root.innerHTML = `
     </div>
   </main>
   <footer>
-    <span class="foot-hint">Lives in your menu bar</span>
+    <button class="secondary" id="export" disabled>Export JSON</button>
     <button class="ghost" id="quit" title="Quit What Can't I Press">Quit</button>
   </footer>
   <div class="toast" id="toast" hidden>Copied</div>
@@ -45,6 +45,7 @@ const scanButton = document.getElementById('scan') as HTMLButtonElement
 const scanAllButton = document.getElementById('scan-all') as HTMLButtonElement
 const cancelButton = document.getElementById('cancel') as HTMLButtonElement
 const quitButton = document.getElementById('quit') as HTMLButtonElement
+const exportButton = document.getElementById('export') as HTMLButtonElement
 const searchInput = document.getElementById('search') as HTMLInputElement
 const statusEl = document.getElementById('status') as HTMLElement
 const bannerEl = document.getElementById('banner') as HTMLElement
@@ -62,11 +63,16 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;')
 }
 
+function hasExportable(): boolean {
+  return !!lastResult && lastResult.shortcuts.length > 0
+}
+
 function setScanning(active: boolean): void {
   scanning = active
   scanButton.disabled = active
   scanAllButton.disabled = active
   cancelButton.hidden = !active
+  exportButton.disabled = active || !hasExportable()
 }
 
 function matchesQuery(shortcut: Shortcut, query: string): boolean {
@@ -176,15 +182,16 @@ function renderResult(): void {
   ).join('')
 
   const notes = lastResult.notes.length
-    ? `<details class="notes"><summary>${lastResult.notes.length} note(s)</summary><ul>${lastResult.notes
+    ? `<section class="notes"><h2>Notes</h2><ul>${lastResult.notes
         .map((n) => `<li>${escapeHtml(n)}</li>`)
-        .join('')}</ul></details>`
+        .join('')}</ul></section>`
     : ''
 
   content.innerHTML = sections + notes
 }
 
-function showToast(): void {
+function showToast(message = 'Copied'): void {
+  toast.textContent = message
   toast.hidden = false
   toast.classList.add('show')
   setTimeout(() => {
@@ -224,6 +231,12 @@ scanButton.addEventListener('click', () => void runScan(false))
 scanAllButton.addEventListener('click', () => void runScan(true))
 cancelButton.addEventListener('click', () => void window.shortcutApi.cancelScan())
 quitButton.addEventListener('click', () => void window.shortcutApi.quit())
+exportButton.addEventListener('click', () => {
+  if (!hasExportable() || !lastResult) return
+  void window.shortcutApi.exportJson(JSON.stringify(lastResult, null, 2)).then((saved) => {
+    if (saved) showToast('Exported')
+  })
+})
 searchInput.addEventListener('input', renderResult)
 
 content.addEventListener('click', (event) => {
@@ -231,5 +244,5 @@ content.addEventListener('click', (event) => {
   if (!row) return
   const combo = row.dataset.combo
   if (!combo) return
-  void navigator.clipboard.writeText(combo).then(showToast)
+  void navigator.clipboard.writeText(combo).then(() => showToast())
 })

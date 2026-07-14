@@ -1,9 +1,10 @@
 import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron'
+import { writeFile } from 'node:fs/promises'
 import { IPC } from '@shared/ipc'
 import type { ScanOptions } from '@shared/scan'
 import { getProvider } from './providers'
 import { runScan, type Cancellation } from './core/scan-runner'
-import { setScanning } from './window'
+import { popoverState, setScanning } from './window'
 
 const ALLOWED_EXTERNAL = /^(https?:|x-apple\.systempreferences:|ms-settings:)/i
 
@@ -77,5 +78,28 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
   ipcMain.handle(IPC.quit, () => {
     app.quit()
+  })
+
+  ipcMain.handle(IPC.exportJson, async (_event, json: string) => {
+    if (typeof json !== 'string') return false
+    const win = getWindow()
+    const options = {
+      title: 'Export shortcuts',
+      defaultPath: 'what-cant-i-press-shortcuts.json',
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    }
+    // Keep the popover from blur-hiding while the save dialog is open.
+    const previousSuppress = popoverState.suppressHide
+    popoverState.suppressHide = true
+    try {
+      const result = win
+        ? await dialog.showSaveDialog(win, options)
+        : await dialog.showSaveDialog(options)
+      if (result.canceled || !result.filePath) return false
+      await writeFile(result.filePath, json, 'utf8')
+      return true
+    } finally {
+      popoverState.suppressHide = previousSuppress
+    }
   })
 }

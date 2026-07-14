@@ -278,9 +278,13 @@ kbd {
   color: var(--text-dim);
 }
 
-.notes summary {
-  cursor: pointer;
-  user-select: none;
+.notes h2 {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  margin: 0 0 4px;
 }
 
 .notes ul {
@@ -333,11 +337,6 @@ footer {
   gap: 10px;
   padding: 8px 14px;
   border-top: 1px solid var(--border);
-}
-
-.foot-hint {
-  font-size: 11px;
-  color: var(--text-dim);
 }
 
 #quit:hover {
