@@ -13,7 +13,8 @@ const api: ShortcutApi = {
   },
   getPermissionStatus: () => ipcRenderer.invoke(IPC.permissionStatus),
   requestPermission: () => ipcRenderer.invoke(IPC.requestPermission),
-  openExternal: (url) => ipcRenderer.invoke(IPC.openExternal, url)
+  openExternal: (url) => ipcRenderer.invoke(IPC.openExternal, url),
+  quit: () => ipcRenderer.invoke(IPC.quit)
 }
 
 contextBridge.exposeInMainWorld('shortcutApi', api)

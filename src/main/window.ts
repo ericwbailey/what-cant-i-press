@@ -27,7 +27,7 @@ export function createPopoverWindow(): BrowserWindow {
     skipTaskbar: true,
     // A subtle vibrancy on macOS; ignored elsewhere.
     vibrancy: process.platform === 'darwin' ? 'menu' : undefined,
-    backgroundColor: process.platform === 'darwin' ? undefined : '#1c1c1e',
+    backgroundColor: process.platform === 'darwin' ? undefined : '#f5f5f7',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,

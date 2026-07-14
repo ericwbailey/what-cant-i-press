@@ -7,7 +7,8 @@ export const IPC = {
   cancelScan: 'shortcuts:cancel-scan',
   permissionStatus: 'shortcuts:permission-status',
   requestPermission: 'shortcuts:request-permission',
-  openExternal: 'app:open-external'
+  openExternal: 'app:open-external',
+  quit: 'app:quit'
 } as const
 
 /** The typed surface exposed to the renderer via the preload bridge. */
@@ -18,4 +19,5 @@ export interface ShortcutApi {
   getPermissionStatus(): Promise<PermissionStatus>
   requestPermission(): Promise<PermissionStatus>
   openExternal(url: string): Promise<void>
+  quit(): Promise<void>
 }

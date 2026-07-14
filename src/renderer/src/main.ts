@@ -34,12 +34,17 @@ root.innerHTML = `
       <div>No scan yet. Press <strong>Scan</strong> to audit reserved shortcuts.</div>
     </div>
   </main>
+  <footer>
+    <span class="foot-hint">Lives in your menu bar</span>
+    <button class="ghost" id="quit" title="Quit What Can't I Press">Quit</button>
+  </footer>
   <div class="toast" id="toast" hidden>Copied</div>
 `
 
 const scanButton = document.getElementById('scan') as HTMLButtonElement
 const scanAllButton = document.getElementById('scan-all') as HTMLButtonElement
 const cancelButton = document.getElementById('cancel') as HTMLButtonElement
+const quitButton = document.getElementById('quit') as HTMLButtonElement
 const searchInput = document.getElementById('search') as HTMLInputElement
 const statusEl = document.getElementById('status') as HTMLElement
 const bannerEl = document.getElementById('banner') as HTMLElement
@@ -218,6 +223,7 @@ window.shortcutApi.onScanProgress((progress) => {
 scanButton.addEventListener('click', () => void runScan(false))
 scanAllButton.addEventListener('click', () => void runScan(true))
 cancelButton.addEventListener('click', () => void window.shortcutApi.cancelScan())
+quitButton.addEventListener('click', () => void window.shortcutApi.quit())
 searchInput.addEventListener('input', renderResult)
 
 content.addEventListener('click', (event) => {

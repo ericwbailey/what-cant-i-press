@@ -1,4 +1,4 @@
-import { dialog, ipcMain, shell, type BrowserWindow } from 'electron'
+import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron'
 import { IPC } from '@shared/ipc'
 import type { ScanOptions } from '@shared/scan'
 import { getProvider } from './providers'
@@ -73,5 +73,9 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       return shell.openExternal(url)
     }
     return undefined
+  })
+
+  ipcMain.handle(IPC.quit, () => {
+    app.quit()
   })
 }
