@@ -92,6 +92,28 @@ button:disabled {
   cursor: default;
 }
 
+.icon-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text);
+  cursor: pointer;
+}
+
+button:focus-visible,
+summary:focus-visible,
+.toolbar input[type='search']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -104,16 +126,11 @@ button:disabled {
   flex: 1;
   appearance: none;
   border: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.05);
+  background: #fff;
   color: var(--text);
   border-radius: 6px;
   padding: 6px 10px;
   font-size: 12px;
-  outline: none;
-}
-
-.toolbar input[type='search']:focus {
-  border-color: var(--accent);
 }
 
 .status {
@@ -196,7 +213,6 @@ details[open] > .segment-head .caret {
 .segment-head h2 {
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.04em;
   color: var(--text-dim);
   margin: 0;
 }

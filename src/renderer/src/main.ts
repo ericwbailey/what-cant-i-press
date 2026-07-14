@@ -77,7 +77,12 @@ root.innerHTML = `
     </div>
   </main>
   <footer>
-    <button class="secondary" id="export" hidden disabled>Export JSON</button>
+    <button class="icon-btn" id="export" hidden disabled data-tip="Export JSON" aria-label="Export JSON">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M8 1.5v8.5m0 0L4.75 6.75M8 10l3.25-3.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2.5 10.5v2A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
     <div class="actions">
       <button class="secondary" id="scan-all">Scan all apps</button>
       <button class="primary" id="scan">Scan current app</button>

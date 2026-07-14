@@ -231,7 +231,7 @@ export function buildShortcutId(
 
 /** Human-friendly section titles per segment. */
 export const SEGMENT_LABELS: Record<ShortcutSegment, string> = {
-  'global-os': 'Global — operating system',
+  'global-os': 'Global: operating system',
   'global-app': 'Global — app (works when app is not focused)',
   'focused-menu': 'App menu (works only when that app is focused)'
 }
