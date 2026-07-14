@@ -190,7 +190,7 @@ function formatKey(key: string, platform: Platform): string {
 }
 
 /** Ordered display tokens for a combo: modifier symbols/labels, then the key. */
-function comboTokens(key: string, modifiers: Modifier[], platform: Platform): string[] {
+export function comboTokens(key: string, modifiers: Modifier[], platform: Platform): string[] {
   const ordered = canonicalizeModifiers(modifiers)
   const keyLabel = formatKey(key, platform)
 
@@ -215,19 +215,6 @@ export function formatCombo(
 ): string {
   const tokens = comboTokens(key, modifiers, platform)
   return platform === 'darwin' ? tokens.join('') : tokens.join('+')
-}
-
-/**
- * Combo label for display, with a thin space (U+2009) between each macOS symbol
- * so stacked glyphs like ⇧⌥⌘← read more clearly. Windows keeps its '+' joins.
- */
-export function formatComboReadable(
-  key: string,
-  modifiers: Modifier[],
-  platform: Platform
-): string {
-  const tokens = comboTokens(key, modifiers, platform)
-  return platform === 'darwin' ? tokens.join('\u2009') : tokens.join('+')
 }
 
 /** Builds a stable, case-insensitive dedupe id for a shortcut. */

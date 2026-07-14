@@ -1,7 +1,7 @@
 import './styles.css'
 import type { PermissionStatus, ScanResult } from '@shared/scan'
 import {
-  formatComboReadable,
+  comboTokens,
   SEGMENT_LABELS,
   type Modifier,
   type Platform,
@@ -73,8 +73,7 @@ root.innerHTML = `
   <div id="banner"></div>
   <main id="content">
     <div class="empty-state">
-      <div class="glyph">\u2328</div>
-      <div>No scan yet. Press <strong>Scan</strong> to audit reserved shortcuts.</div>
+      <div>Press <strong>Scan</strong> to audit reserved shortcuts.</div>
     </div>
   </main>
   <footer>
@@ -145,7 +144,10 @@ function renderRow(shortcut: Shortcut, platform: Platform): string {
   const disabled = shortcut.enabled === false ? ' <span class="off">(disabled)</span>' : ''
   const desc = shortcut.description ? escapeHtml(shortcut.description) : '<span class="dim">—</span>'
   const fullName = escapeHtml(fullComboName(shortcut, platform))
-  const combo = escapeHtml(formatComboReadable(shortcut.key, shortcut.modifiers, platform))
+  const sep = platform === 'darwin' ? '&#8201;' : '+'
+  const combo = comboTokens(shortcut.key, shortcut.modifiers, platform)
+    .map(escapeHtml)
+    .join(sep)
   return `
     <li class="row" data-combo="${escapeHtml(shortcut.comboLabel)}">
       <kbd data-tip="${fullName}">${combo}</kbd>
@@ -291,9 +293,13 @@ async function runScan(scanAllApps: boolean): Promise<void> {
     renderResult()
   } finally {
     setScanning(false)
-    statusEl.textContent = lastResult
-      ? `${lastResult.shortcuts.length} shortcuts \u00b7 ${lastResult.appsScanned} app(s)`
-      : ''
+    if (lastResult) {
+      const count = lastResult.appsScanned
+      const appLabel = count === 1 ? 'app' : 'apps'
+      statusEl.textContent = `${lastResult.shortcuts.length} shortcuts \u00b7 ${count} ${appLabel}`
+    } else {
+      statusEl.textContent = ''
+    }
   }
 }
 
@@ -356,3 +362,5 @@ content.addEventListener('click', (event) => {
   hideTip()
   void navigator.clipboard.writeText(combo).then(() => showToast())
 })
+
+scanButton.focus()

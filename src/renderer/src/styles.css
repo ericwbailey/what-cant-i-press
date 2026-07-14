@@ -313,10 +313,6 @@ kbd {
   padding: 0 24px;
 }
 
-.empty-state .glyph {
-  font-size: 28px;
-}
-
 .toast {
   position: fixed;
   bottom: 16px;
