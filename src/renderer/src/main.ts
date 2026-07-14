@@ -2,11 +2,57 @@ import './styles.css'
 import type { PermissionStatus, ScanResult } from '@shared/scan'
 import {
   SEGMENT_LABELS,
+  type Modifier,
+  type Platform,
   type Shortcut,
   type ShortcutSegment
 } from '@shared/shortcuts'
 
 const SEGMENT_ORDER: ShortcutSegment[] = ['global-os', 'global-app', 'focused-menu']
+
+const MOD_FULL_MAC: Record<Modifier, string> = {
+  function: 'Function',
+  control: 'Control',
+  option: 'Option',
+  shift: 'Shift',
+  command: 'Command',
+  super: 'Command'
+}
+
+const MOD_FULL_WIN: Record<Modifier, string> = {
+  super: 'Windows',
+  control: 'Control',
+  option: 'Alt',
+  shift: 'Shift',
+  function: 'Fn',
+  command: 'Command'
+}
+
+const KEY_FULL: Record<string, string> = {
+  Space: 'Space',
+  Tab: 'Tab',
+  Return: 'Return',
+  Enter: 'Enter',
+  Escape: 'Escape',
+  Delete: 'Delete',
+  ForwardDelete: 'Forward Delete',
+  Left: 'Left Arrow',
+  Right: 'Right Arrow',
+  Up: 'Up Arrow',
+  Down: 'Down Arrow',
+  Home: 'Home',
+  End: 'End',
+  PageUp: 'Page Up',
+  PageDown: 'Page Down',
+  Clear: 'Clear'
+}
+
+function fullComboName(shortcut: Shortcut, platform: Platform): string {
+  const map = platform === 'darwin' ? MOD_FULL_MAC : MOD_FULL_WIN
+  const mods = shortcut.modifiers.map((m) => map[m])
+  const key = KEY_FULL[shortcut.key] ?? shortcut.key
+  return [...mods, key].join(' + ')
+}
 
 const root = document.getElementById('app')
 if (!root) throw new Error('missing #app root')
@@ -35,10 +81,11 @@ root.innerHTML = `
     </div>
   </main>
   <footer>
-    <button class="secondary" id="export" disabled>Export JSON</button>
-    <button class="ghost" id="quit" title="Quit What Can't I Press">Quit</button>
+    <button class="secondary" id="export" hidden disabled>Export JSON</button>
+    <button class="ghost" id="quit" data-tip="Quit What Can't I Press">Quit</button>
   </footer>
   <div class="toast" id="toast" hidden>Copied</div>
+  <div class="tip" id="tip" role="tooltip" hidden></div>
 `
 
 const scanButton = document.getElementById('scan') as HTMLButtonElement
@@ -51,9 +98,12 @@ const statusEl = document.getElementById('status') as HTMLElement
 const bannerEl = document.getElementById('banner') as HTMLElement
 const content = document.getElementById('content') as HTMLElement
 const toast = document.getElementById('toast') as HTMLElement
+const tip = document.getElementById('tip') as HTMLElement
 
 let lastResult: ScanResult | null = null
 let scanning = false
+const collapsedSegments = new Set<ShortcutSegment>()
+let tipTarget: HTMLElement | null = null
 
 function escapeHtml(value: string): string {
   return value
@@ -72,6 +122,7 @@ function setScanning(active: boolean): void {
   scanButton.disabled = active
   scanAllButton.disabled = active
   cancelButton.hidden = !active
+  exportButton.hidden = !lastResult
   exportButton.disabled = active || !hasExportable()
 }
 
@@ -82,18 +133,19 @@ function matchesQuery(shortcut: Shortcut, query: string): boolean {
 }
 
 function badge(source: Shortcut['source']): string {
-  const title =
+  const tipText =
     source === 'curated'
       ? 'Curated default — the app may have remapped this'
       : 'Detected live from this app or the OS'
-  return `<span class="badge badge-${source}" title="${title}">${source}</span>`
+  return `<span class="badge badge-${source}" data-tip="${escapeHtml(tipText)}">${source}</span>`
 }
 
-function renderRow(shortcut: Shortcut): string {
+function renderRow(shortcut: Shortcut, platform: Platform): string {
   const disabled = shortcut.enabled === false ? ' <span class="off">(disabled)</span>' : ''
   const desc = shortcut.description ? escapeHtml(shortcut.description) : '<span class="dim">—</span>'
+  const fullName = escapeHtml(fullComboName(shortcut, platform))
   return `
-    <li class="row" data-combo="${escapeHtml(shortcut.comboLabel)}" title="Click to copy">
+    <li class="row" data-combo="${escapeHtml(shortcut.comboLabel)}" data-tip="${fullName}">
       <kbd>${escapeHtml(shortcut.comboLabel)}</kbd>
       <span class="desc">${desc}${disabled}</span>
       ${badge(shortcut.source)}
@@ -101,8 +153,8 @@ function renderRow(shortcut: Shortcut): string {
   `
 }
 
-function renderAppGroup(appName: string, rows: Shortcut[]): string {
-  const items = rows.map(renderRow).join('')
+function renderAppGroup(appName: string, rows: Shortcut[], platform: Platform): string {
+  const items = rows.map((row) => renderRow(row, platform)).join('')
   return `
     <div class="app-group">
       <div class="app-name">${escapeHtml(appName)}</div>
@@ -111,7 +163,11 @@ function renderAppGroup(appName: string, rows: Shortcut[]): string {
   `
 }
 
-function renderSegment(segment: ShortcutSegment, shortcuts: Shortcut[]): string {
+function renderSegment(
+  segment: ShortcutSegment,
+  shortcuts: Shortcut[],
+  platform: Platform
+): string {
   if (shortcuts.length === 0) return ''
 
   const byApp = new Map<string, Shortcut[]>()
@@ -124,17 +180,20 @@ function renderSegment(segment: ShortcutSegment, shortcuts: Shortcut[]): string 
 
   const groups = [...byApp.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([appName, rows]) => renderAppGroup(appName, rows))
+    .map(([appName, rows]) => renderAppGroup(appName, rows, platform))
     .join('')
 
+  const open = collapsedSegments.has(segment) ? '' : ' open'
+
   return `
-    <section class="segment">
-      <div class="segment-head">
+    <details class="segment" data-segment="${segment}"${open}>
+      <summary class="segment-head">
+        <span class="caret" aria-hidden="true"></span>
         <h2>${escapeHtml(SEGMENT_LABELS[segment])}</h2>
         <span class="count">${shortcuts.length}</span>
-      </div>
+      </summary>
       ${groups}
-    </section>
+    </details>
   `
 }
 
@@ -160,8 +219,10 @@ function renderBanner(permission: PermissionStatus): void {
 
 function renderResult(): void {
   if (!lastResult) return
+  hideTip()
   const query = searchInput.value.trim().toLowerCase()
   const visible = lastResult.shortcuts.filter((sc) => matchesQuery(sc, query))
+  const platform = lastResult.platform
 
   renderBanner(lastResult.permission)
 
@@ -177,7 +238,8 @@ function renderResult(): void {
   const sections = SEGMENT_ORDER.map((segment) =>
     renderSegment(
       segment,
-      visible.filter((sc) => sc.segment === segment)
+      visible.filter((sc) => sc.segment === segment),
+      platform
     )
   ).join('')
 
@@ -198,6 +260,30 @@ function showToast(message = 'Copied'): void {
     toast.classList.remove('show')
     setTimeout(() => (toast.hidden = true), 200)
   }, 900)
+}
+
+function showTip(target: HTMLElement): void {
+  const text = target.dataset.tip
+  if (!text) return
+  tipTarget = target
+  tip.textContent = text
+  tip.hidden = false
+  const anchor = target.getBoundingClientRect()
+  const box = tip.getBoundingClientRect()
+  let left = anchor.left + anchor.width / 2 - box.width / 2
+  left = Math.max(6, Math.min(left, window.innerWidth - box.width - 6))
+  let top = anchor.top - box.height - 6
+  if (top < 6) top = anchor.bottom + 6
+  tip.style.left = `${left}px`
+  tip.style.top = `${top}px`
+  tip.classList.add('show')
+}
+
+function hideTip(): void {
+  if (!tipTarget) return
+  tipTarget = null
+  tip.classList.remove('show')
+  tip.hidden = true
 }
 
 async function runScan(scanAllApps: boolean): Promise<void> {
@@ -239,10 +325,38 @@ exportButton.addEventListener('click', () => {
 })
 searchInput.addEventListener('input', renderResult)
 
+content.addEventListener(
+  'toggle',
+  (event) => {
+    const details = event.target as HTMLElement
+    if (!(details instanceof HTMLDetailsElement)) return
+    const segment = details.dataset.segment as ShortcutSegment | undefined
+    if (!segment) return
+    if (details.open) collapsedSegments.delete(segment)
+    else collapsedSegments.add(segment)
+  },
+  true
+)
+
+content.addEventListener('scroll', hideTip)
+
+document.addEventListener('mouseover', (event) => {
+  const target = (event.target as HTMLElement).closest('[data-tip]') as HTMLElement | null
+  if (target && target !== tipTarget) showTip(target)
+})
+
+document.addEventListener('mouseout', (event) => {
+  const target = (event.target as HTMLElement).closest('[data-tip]') as HTMLElement | null
+  if (!target) return
+  const related = event.relatedTarget as Node | null
+  if (!related || !target.contains(related)) hideTip()
+})
+
 content.addEventListener('click', (event) => {
   const row = (event.target as HTMLElement).closest('.row') as HTMLElement | null
   if (!row) return
   const combo = row.dataset.combo
   if (!combo) return
+  hideTip()
   void navigator.clipboard.writeText(combo).then(() => showToast())
 })
