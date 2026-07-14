@@ -64,7 +64,7 @@ root.innerHTML = `
       <h1>What Can't I Press</h1>
       <div class="subtitle">Reserved keyboard shortcuts</div>
     </div>
-    <button class="ghost" id="quit" data-tip="Quit What Can't I Press">Quit</button>
+    <button class="ghost" id="quit">Quit</button>
   </header>
   <div class="toolbar">
     <input id="search" type="search" placeholder="Filter by combo, app, or action" autocomplete="off" spellcheck="false" />
