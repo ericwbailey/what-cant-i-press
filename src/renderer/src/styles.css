@@ -54,6 +54,7 @@ header .subtitle {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-left: auto;
 }
 
 button.primary,
@@ -365,10 +366,6 @@ footer {
   gap: 10px;
   padding: 8px 14px;
   border-top: 1px solid var(--border);
-}
-
-#export {
-  margin-left: auto;
 }
 
 #quit:hover {

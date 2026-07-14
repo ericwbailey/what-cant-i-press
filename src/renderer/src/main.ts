@@ -1,6 +1,7 @@
 import './styles.css'
 import type { PermissionStatus, ScanResult } from '@shared/scan'
 import {
+  formatComboReadable,
   SEGMENT_LABELS,
   type Modifier,
   type Platform,
@@ -77,12 +78,12 @@ root.innerHTML = `
     </div>
   </main>
   <footer>
+    <button class="secondary" id="export" hidden disabled>Export JSON</button>
     <div class="actions">
       <button class="secondary" id="scan-all">Scan all apps</button>
       <button class="primary" id="scan">Scan current app</button>
       <button class="ghost" id="cancel" hidden>Cancel</button>
     </div>
-    <button class="secondary" id="export" hidden disabled>Export JSON</button>
   </footer>
   <div class="toast" id="toast" hidden>Copied</div>
   <div class="tip" id="tip" role="tooltip" hidden></div>
@@ -144,9 +145,10 @@ function renderRow(shortcut: Shortcut, platform: Platform): string {
   const disabled = shortcut.enabled === false ? ' <span class="off">(disabled)</span>' : ''
   const desc = shortcut.description ? escapeHtml(shortcut.description) : '<span class="dim">—</span>'
   const fullName = escapeHtml(fullComboName(shortcut, platform))
+  const combo = escapeHtml(formatComboReadable(shortcut.key, shortcut.modifiers, platform))
   return `
-    <li class="row" data-combo="${escapeHtml(shortcut.comboLabel)}" data-tip="${fullName}">
-      <kbd>${escapeHtml(shortcut.comboLabel)}</kbd>
+    <li class="row" data-combo="${escapeHtml(shortcut.comboLabel)}">
+      <kbd data-tip="${fullName}">${combo}</kbd>
       <span class="desc">${desc}${disabled}</span>
       ${badge(shortcut.source)}
     </li>
