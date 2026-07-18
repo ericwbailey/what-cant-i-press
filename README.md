@@ -1,4 +1,4 @@
-<center><img width="401" height="401" alt="An active gas stove burner, as seen from the top." src="https://github.com/user-attachments/assets/c334f95c-9ec0-4e9c-bbec-a30b9a4c1fad" /></center>
+<p align="center"><img width="401" height="401" alt="An active gas stove burner, as seen from the top." src="https://github.com/user-attachments/assets/08ba8e34-fe8b-4949-b0a1-72c2b7d29330" /></p>
 
 # What Can't I Press?
 
