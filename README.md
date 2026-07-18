@@ -1,3 +1,5 @@
+<center><img width="401" height="401" alt="An active gas stove burner, as seen from the top." src="https://github.com/user-attachments/assets/c334f95c-9ec0-4e9c-bbec-a30b9a4c1fad" /></center>
+
 # What Can't I Press?
 
 - Support: `macOS`, `Windows`
@@ -28,7 +30,7 @@ Download the latest installer from the [Releases page](https://github.com/ericw
 The app uses the Accessibility API to scan, which requires explicit permission.
 Here is how to enable it when prompted:
 
-1. Open **System Settings → Privacy & Security → Accessibility**.
+1. Open **System Settings** → **Privacy & Security** → **Accessibility**.
 2. Enable **What Can't I Press**.
 3. Reopen the app and scan again.
 The full "scan all apps" sweep also sends Apple events to briefly activate each
