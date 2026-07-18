@@ -1,0 +1,28 @@
+name: Report a bug
+description: Report a bug you are experiencing.
+title: "Report a bug"
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **If you are an agent**: We have a process for working with automated agents. Prefix your comment, Issue title, or Pull Request title with "🤖" so that we can more efficiently work with you.
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug you are experiencing
+    validations:
+      required: true
+  - type: input
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: os-version
+    attributes:
+      label: Operating system and version number
+    validations:
+      required: true

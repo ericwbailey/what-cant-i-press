@@ -1,5 +1,5 @@
 import type { RawShortcut, Platform } from '@shared/shortcuts'
-import type { PermissionStatus } from '@shared/scan'
+import type { CoverageGap, PermissionStatus } from '@shared/scan'
 
 /** A running application that may own keyboard shortcuts. */
 export interface RunningApp {
@@ -38,6 +38,13 @@ export interface PlatformProvider {
 
   /** Brings an app to the foreground. */
   activateApp(app: RunningApp): Promise<void>
+
+  /**
+   * Returns non-exhaustiveness markers for an app whose shortcuts cannot be fully
+   * enumerated (e.g. it registers runtime hotkeys). Best-effort: resolves empty
+   * when nothing is flagged or the check is unavailable.
+   */
+  readCoverageGaps(app: RunningApp): Promise<CoverageGap[]>
 
   /** Reports whether the scan has the OS permissions it needs. */
   permissionStatus(): Promise<PermissionStatus>

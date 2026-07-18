@@ -1,8 +1,9 @@
-import type { ScanOptions, ScanProgress, ScanResult } from '@shared/scan'
+import type { ScanOptions, ScanProgress, ScanResult, CoverageGap } from '@shared/scan'
 import type { RawShortcut } from '@shared/shortcuts'
 import type { PlatformProvider, RunningApp } from '../providers/types'
 import { aggregate } from './aggregate'
 import { getCuratedShortcuts } from './curated'
+import { getScreenReaderShortcuts, isScreenReaderApp } from './screen-readers'
 
 /** Simple cooperative cancellation token flipped by the cancel IPC. */
 export interface Cancellation {
@@ -29,17 +30,20 @@ async function scanFrontmostOnly(
   onProgress: ProgressReporter,
   cancel: Cancellation,
   currentApp?: RunningApp | null
-): Promise<{ raws: RawShortcut[]; appsScanned: number }> {
-  if (cancel.cancelled) return { raws: [], appsScanned: 0 }
+): Promise<{ raws: RawShortcut[]; appsScanned: number; gaps: CoverageGap[] }> {
+  if (cancel.cancelled) return { raws: [], appsScanned: 0, gaps: [] }
   const frontmost = currentApp ?? (await provider.getFrontmostApp())
-  if (!frontmost) return { raws: [], appsScanned: 0 }
+  if (!frontmost) return { raws: [], appsScanned: 0, gaps: [] }
+  // A screen reader is surfaced from the curated set, not its menu bar.
+  if (isScreenReaderApp(frontmost)) return { raws: [], appsScanned: 0, gaps: [] }
 
   onProgress({ phase: 'apps', current: 1, total: 1, appName: frontmost.name })
   try {
     const raws = await provider.readAppMenuShortcuts(frontmost)
-    return { raws, appsScanned: 1 }
+    const gaps = await provider.readCoverageGaps(frontmost)
+    return { raws, appsScanned: 1, gaps }
   } catch {
-    return { raws: [], appsScanned: 0 }
+    return { raws: [], appsScanned: 0, gaps: [] }
   }
 }
 
@@ -54,12 +58,15 @@ async function scanAllApps(
   onProgress: ProgressReporter,
   cancel: Cancellation,
   restoreTo?: RunningApp | null
-): Promise<{ raws: RawShortcut[]; appsScanned: number }> {
+): Promise<{ raws: RawShortcut[]; appsScanned: number; gaps: CoverageGap[] }> {
   const raws: RawShortcut[] = []
+  const gaps: CoverageGap[] = []
   let appsScanned = 0
 
   const originalFront = restoreTo ?? (await provider.getFrontmostApp())
-  const targets = apps.filter((app) => app.pid !== process.pid && app.hasMenu !== false)
+  const targets = apps.filter(
+    (app) => app.pid !== process.pid && app.hasMenu !== false && !isScreenReaderApp(app)
+  )
   const total = targets.length
 
   try {
@@ -72,6 +79,7 @@ async function scanAllApps(
         await provider.activateApp(app)
         await delay(ACTIVATION_SETTLE_MS)
         raws.push(...(await provider.readAppMenuShortcuts(app)))
+        gaps.push(...(await provider.readCoverageGaps(app)))
         appsScanned++
       } catch {
         // Skip apps whose menus cannot be read.
@@ -87,7 +95,16 @@ async function scanAllApps(
     }
   }
 
-  return { raws, appsScanned }
+  return { raws, appsScanned, gaps }
+}
+
+/** Removes duplicate coverage-gap markers (same source for the same app). */
+function dedupeGaps(gaps: CoverageGap[]): CoverageGap[] {
+  const byKey = new Map<string, CoverageGap>()
+  for (const gap of gaps) {
+    byKey.set(`${gap.source}|${gap.appId ?? gap.appName}`, gap)
+  }
+  return [...byKey.values()]
 }
 
 /**
@@ -116,6 +133,7 @@ export async function runScan(
   const apps = await provider.listRunningApps()
 
   let appsScanned = 0
+  const coverageGaps: CoverageGap[] = []
   if (!cancel.cancelled) {
     const result =
       options.scanAllApps && apps.length > 0
@@ -123,10 +141,15 @@ export async function runScan(
         : await scanFrontmostOnly(provider, onProgress, cancel, currentApp)
     raws.push(...result.raws)
     appsScanned = result.appsScanned
+    coverageGaps.push(...result.gaps)
   }
 
   onProgress({ phase: 'curated' })
   raws.push(...getCuratedShortcuts(apps, provider.platform))
+  // JAWS, NVDA, Narrator, and VoiceOver are always surfaced, on every platform
+  // and regardless of whether a copy is running; aggregate dedupes by id so they
+  // appear once.
+  raws.push(...getScreenReaderShortcuts())
 
   onProgress({ phase: 'aggregating' })
   const shortcuts = aggregate(raws, provider.platform)
@@ -137,6 +160,7 @@ export async function runScan(
     platform: provider.platform,
     permission,
     shortcuts,
-    appsScanned
+    appsScanned,
+    coverageGaps: dedupeGaps(coverageGaps)
   }
 }

@@ -1,139 +1,69 @@
-# What Can't I Press
+# What Can't I Press?
 
-A macOS and Windows menu-bar app that audits which keyboard shortcuts are already
-reserved — by the operating system and by running applications — so a combination
-that is free for a new binding can be identified at a glance.
+- Support: `macOS`, `Windows`
+- [Roadmap](https://github.com/ericwbailey/what-cant-i-press/blob/main/ROADMAP.md)
 
-Clicking the tray icon collects reserved shortcuts and presents them in three
-segments:
+**Helps to show what keyboard shortcuts are already claimed by different screen readers and apps**. This helps to prevent collisions when creating new keybindings. 
 
-- **Global — operating system.** Reserved system-wide by the OS, always active
-  (for example Spotlight's `⌘Space`, or `⇧⌘3` for screenshots).
-- **Global — app (works when the app is not focused).** Registered system-wide by a
-  running third-party app. Active while that app runs, regardless of which window is
-  focused (for example a launcher's activation hotkey).
-- **App menu (works only when that app is focused).** Menu accelerators, active only
-  while the owning app is frontmost (for example `⌘W` to close a tab).
+For example, h is often used to toggle open help dialogs. h is also the most popular navigation technique used by the two most popular screen readers on the planet. 
 
-Each row is labelled with its source: **detected** (read live from the system) or
-**curated** (from the bundled database, see [Data sources](#data-sources)).
+> [!NOTE]  
+> This app cannot not detect **all** keyboard shortcuts. This is because some keyboard shortcuts can be implemented in a way that scanning cannot detect. **Treat the app as a starting point**.
 
-## Data sources
+## How to use
+### Scan to discover shortcuts
+- Detect shortcuts in the app you had open prior to opening What Can’t I Press, or
+- Scan all currently open apps (takes longer).
+### Search and filter
+- **Search by intent**. Search for keyboard shortcuts or commands to filter the list.
+- **Search by keypress**. Enter keyboard shortcuts to also filter. 
+### Copy to share
+Click a keyboard shortcut row to copy it to your clipboard. 
+### Export
+JSON can be generated for what keyboard shortcuts are currently displayed. 
+## Download & install
+Download the latest installer from the [Releases page](https://github.com/ericwbailey/what-cant-i-press/releases/latest). Builds are currently unsigned and will need to be manually approved to run. 
+### Permissions
+#### macOS
+The app uses the Accessibility API to scan, which requires explicit permission.
+Here is how to enable it when prompted:
 
-No public OS API enumerates the global hotkeys registered by *other* processes.
-Neither macOS (`RegisterEventHotKey`) nor Windows (`RegisterHotKey`) exposes the
-registrations of another app. The "works when the app is not focused" segment
-therefore cannot be produced by live detection and is sourced from a curated
-database instead. Everything else is read live:
-
-| Segment                | macOS source                                   | Windows source                          |
-| ---------------------- | ---------------------------------------------- | --------------------------------------- |
-| Global — operating system | `com.apple.symbolichotkeys` (detected)      | Curated OS-shortcut list                |
-| Global — app           | Curated database, matched to running apps      | Curated database, matched to running apps |
-| App menu               | Accessibility API — `AXMenuItem*` (detected)   | UI Automation accelerators (detected)   |
-
-## Requirements
-
-- Node.js 22+ and npm.
-- **macOS build:** Xcode command-line tools (`swiftc`) to compile the helper.
-- **Windows build:** the .NET SDK (`dotnet`) to publish the helper. The helper must
-  be built on a Windows host; it cannot be cross-compiled from macOS.
-
-## Develop
-
-```sh
-npm install
-npm run build:helper:mac   # on macOS — compiles the Swift Accessibility helper
-npm run dev
-```
-
-`npm run dev` starts electron-vite with hot reload. On macOS, grant Accessibility
-permission (see [Permissions](#permissions)) before the app-menu scan returns data.
-
-Type-check without building:
-
-```sh
-npm run typecheck
-```
-
-## Package
-
-```sh
-npm run build:mac   # → dist/*.dmg and dist/*.zip
-npm run build:win   # → dist/*.exe  (run on Windows)
-```
-
-Each command builds the renderer, compiles the platform helper into `resources/bin`,
-and runs electron-builder. `build:mac` signs under the hardened runtime using
-`build/entitlements.mac.plist`; supply signing identity and notarization credentials
-through the standard electron-builder environment variables for a distributable
-build.
-
-## Permissions
-
-### macOS
-
-The app-menu scan uses the Accessibility API, which requires explicit permission.
-The in-app banner links to the setting; to grant it manually:
-
-1. Open **System Settings → Privacy & Security → Accessibility**.
-2. Enable **What Can't I Press** (in development, enable the **Electron** entry).
-3. Reopen the popover and scan again.
-
+1. Open **System Settings → Privacy & Security → Accessibility**.
+2. Enable **What Can't I Press**.
+3. Reopen the app and scan again.
 The full "scan all apps" sweep also sends Apple events to briefly activate each
-running app; macOS may prompt for Automation permission the first time.
-
-### Windows
-
+running app—macOS may prompt for Automation permission the first time.
+#### Windows
 UI Automation needs no up-front permission for ordinary apps. Reading menu
-accelerators from an app running **elevated** (as administrator) requires this app
-to run elevated as well; otherwise those apps are silently skipped.
+accelerators from an app running as administrator requires this app
+to run elevated as well. These apps are silently skipped otherwise.
 
-## Using it
+## Privacy
+All work is performed on-device. Nothing about what you scan ever leaves your computer.
 
-- Click the tray icon to open the popover.
-- **Scan** reads the OS shortcuts, the curated global hotkeys for running apps, and
-  the frontmost app's menu accelerators.
-- **Scan all apps** additionally activates each running app in turn to read its menus,
-  then restores the app that was frontmost. This is disruptive (each app flashes
-  forward) and is gated behind a confirmation dialog.
-- Filter the results with the search box; click any row to copy its combination.
+The keyboard shortcuts it reads are analyzed locally and shown only to you. No data is collected, stored off-device, or sent anywhere. 
 
-## Known limitations
+There is no telemetry or analytics. Its only network activity is checking GitHub for new releases and opening links, such as the project page, and that is only triggered by manual activation. 
 
-- **Third-party global hotkeys are curated defaults.** They reflect each app's
-  out-of-the-box bindings, not a user's custom remaps, and require ongoing
-  maintenance as apps change.
-- **Global hotkeys of other apps are not live-enumerable** on either platform; this
-  is an OS constraint, not an implementation gap.
-- **Scan-all is disruptive and slow** in proportion to the number of running apps,
-  because each must be activated to expose its menus.
-- **macOS app-menu reading needs Accessibility permission;** without it, only OS and
-  curated shortcuts are returned.
-- **Windows menus** are read via UI Automation for the focused window; some apps
-  expose accelerators only once a menu is opened, and elevated apps are skipped
-  unless this app is elevated too.
-- **The Windows helper is untested on this machine** (built and verified on a
-  Windows host is required).
+---
 
-## Extending the curated database
-
-Global-hotkey defaults for third-party apps live in
-`src/main/core/curated-data.ts`. Each entry keys on a macOS bundle id / Windows
-process name (plus name aliases) and lists `{ combo, description }` shortcuts.
-Add an app by appending an entry there; it is matched against running apps at scan
-time and surfaced in the **Global — app** segment.
-
-## Project layout
-
-```
-src/main/            Electron main process
-  core/              schema, aggregation, curated database + matcher, scan runner
-  providers/macos/   Swift-helper wiring, symbolic-hotkeys + menu decoders
-  providers/windows/ UIA-helper wiring, accelerator parser, curated OS list
-  ipc.ts window.ts   typed IPC, tray + frameless popover, scan guard
-src/renderer/        popover UI (segmented results, filter, copy, banner)
-src/shared/          domain model, combo formatting, segment labels
-native/macos/        Swift Accessibility helper + build script
-native/windows/      .NET UI Automation helper + build script
-```
+<details>
+<summary>
+How the scan works
+</summary>
+<p>How the app scans <b>macOS</b>:</p>
+<ul>
+  <li>Lists the running app through a small bundled Swift helper.</li>
+  <li>For each app, reads its menu bar with macOS Accessibility and pulls the shortcut shown next to every menu command.</li>
+  <li>Layers on any custom shortcuts set in System Settings → Keyboard → Keyboard Shortcuts → App Shortcuts — for both the specific app and "All Applications" — which override the app's defaults.</li>
+  <li>Reads the built-in macOS system shortcuts from the symbolic-hotkeys preferences file and decodes each into a key, modifiers, and a plain-English label.</li>
+  <li>Flags apps that register hidden global hotkeys at runtime. Their binary imports `RegisterEventHotKey` as a coverage gap, since those can't be enumerated.</li>
+</ul>
+<p>How the app scans <b>Windows</b>:</p>
+  <li>Lists the running apps by finding processes that have a visible main window, using the window title as the name.</li>
+  <li>For each app, uses Windows UI Automation to walk its menu bars and read the accelerator key listed on each menu item.</li>
+  <li>Falls back to scanning the whole window when no menu bar is found, and drops duplicate entries.</li>
+  <li>Uses a built-in, hand-maintained list of Windows system shortcuts (<kbd>Win</kbd> + <kbd>E</kbd>, <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Esc</kbd>, <kbd>Alt</kbd> + <kbd>Tab</kbd>, etc.), because Windows exposes no store to read these from.</li>
+  <li>Needs no special permission for normal apps. apps running as administrator stay unreadable unless this app is elevated too.</li>
+</ul>
+</details>

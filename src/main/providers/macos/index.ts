@@ -3,10 +3,12 @@ import { promisify } from 'node:util'
 import { join } from 'node:path'
 import { app, systemPreferences } from 'electron'
 import type { Platform, RawShortcut } from '@shared/shortcuts'
-import type { PermissionStatus } from '@shared/scan'
+import type { CoverageGap, PermissionStatus } from '@shared/scan'
 import type { PlatformProvider, RunningApp } from '../types'
 import { readSymbolicHotkeys } from './symbolic-hotkeys'
-import { decodeMenuItem, type RawMenuItem } from './menu'
+import { type RawMenuItem } from './menu'
+import { mergeMenuOverrides, readKeyEquivalents } from './key-equivalents'
+import { readRuntimeHotkeyFlag } from './runtime-flags'
 
 const execFileAsync = promisify(execFile)
 
@@ -57,25 +59,10 @@ export class MacProvider implements PlatformProvider {
 
   async readAppMenuShortcuts(appRef: RunningApp): Promise<RawShortcut[]> {
     const items = await runHelper<RawMenuItem[]>(['menu', String(appRef.pid)])
-    if (!Array.isArray(items)) return []
-
-    const raws: RawShortcut[] = []
-    for (const item of items) {
-      const decoded = decodeMenuItem(item)
-      if (!decoded) continue
-      raws.push({
-        key: decoded.key,
-        modifiers: decoded.modifiers,
-        origin: 'app',
-        segment: 'focused-menu',
-        source: 'detected',
-        appId: appRef.id,
-        appName: appRef.name,
-        description: item.title || undefined,
-        enabled: true
-      })
-    }
-    return raws
+    const menuItems = Array.isArray(items) ? items : []
+    // App Shortcuts overrides (System Settings) supersede the app's own defaults.
+    const overrides = await readKeyEquivalents(appRef.id)
+    return mergeMenuOverrides(menuItems, overrides, appRef)
   }
 
   async getFrontmostApp(): Promise<RunningApp | null> {
@@ -86,6 +73,11 @@ export class MacProvider implements PlatformProvider {
 
   async activateApp(appRef: RunningApp): Promise<void> {
     await runHelper(['activate', String(appRef.pid)])
+  }
+
+  async readCoverageGaps(appRef: RunningApp): Promise<CoverageGap[]> {
+    const gap = await readRuntimeHotkeyFlag(appRef)
+    return gap ? [gap] : []
   }
 
   async permissionStatus(): Promise<PermissionStatus> {

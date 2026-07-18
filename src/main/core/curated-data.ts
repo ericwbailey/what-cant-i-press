@@ -4,8 +4,6 @@ export interface CuratedShortcut {
   modifiers: Modifier[]
   key: string
   description: string
-  /** Whether this hotkey is enabled by default in the app. */
-  defaultEnabled?: boolean
 }
 
 export interface CuratedApp {

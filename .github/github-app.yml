@@ -9,23 +9,24 @@
 # bundles and the native Accessibility helper, then launch the app. The default
 # "Build and run" targets macOS (the app is macOS-first and its Windows helper is
 # untested); a Windows variant is provided as a separate entry.
+#
+# The macOS commands prepend Homebrew's bin to PATH. The app runs scripts under a
+# non-interactive shell that does not source ~/.zshrc, so nvm/Homebrew PATH
+# additions (where `npm` lives) are otherwise absent and `npm` is not found.
 scripts:
   - name: Setup
-    command: npm install
+    command: export PATH="/opt/homebrew/bin:$PATH" && npm install
     triggers:
       - session.create
 
   - name: Build and run
-    command: npm run build && npm run build:helper:mac && npm start
+    command: export PATH="/opt/homebrew/bin:$PATH" && npm run build && npm run build:helper:mac && npm start
 
   - name: Dev (hot reload)
-    command: npm run dev
+    command: export PATH="/opt/homebrew/bin:$PATH" && npm run dev
 
   - name: Build
-    command: npm run build && npm run build:helper:mac
-
-  - name: Typecheck
-    command: npm run typecheck
+    command: export PATH="/opt/homebrew/bin:$PATH" && npm run build && npm run build:helper:mac
 
   - name: Build and run (Windows)
     command: npm run build && npm run build:helper:win && npm start

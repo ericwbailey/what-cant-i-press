@@ -1,6 +1,6 @@
 {
   "name": "what-cant-i-press",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Menu-bar app that audits reserved keyboard shortcuts across the OS and running apps.",
   "main": "./out/main/index.js",
   "author": "Eric Bailey",
@@ -12,7 +12,7 @@
   "bugs": {
     "url": "https://github.com/ericwbailey/what-cant-i-press/issues"
   },
-  "license": "MIT",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "private": true,
   "scripts": {
     "dev": "electron-vite dev",
@@ -25,7 +25,9 @@
     "build:helper:mac": "bash native/macos/build.sh",
     "build:helper:win": "pwsh -File native/windows/build.ps1",
     "build:mac": "npm run build && npm run build:helper:mac && electron-builder --mac",
-    "build:win": "npm run build && npm run build:helper:win && electron-builder --win"
+    "build:win": "npm run build && npm run build:helper:win && electron-builder --win",
+    "release:mac": "npm run build && npm run build:helper:mac && electron-builder --mac --universal --publish always",
+    "release:win": "npm run build && npm run build:helper:win && electron-builder --win --publish always"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
@@ -34,5 +36,9 @@
     "electron-vite": "^5.0.0",
     "typescript": "^7.0.2",
     "vite": "^7.3.6"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "lucide": "^1.24.0"
   }
 }

@@ -3,6 +3,7 @@ import {
   canonicalizeModifiers,
   formatCombo,
   normalizeKeyToken,
+  SEGMENT_SCOPE,
   type Platform,
   type RawShortcut,
   type Shortcut,
@@ -12,7 +13,8 @@ import {
 const SEGMENT_RANK: Record<ShortcutSegment, number> = {
   'global-os': 0,
   'global-app': 1,
-  'focused-menu': 2
+  'focused-menu': 2,
+  'screen-reader': 3
 }
 
 const SOURCE_RANK: Record<RawShortcut['source'], number> = {
@@ -21,6 +23,28 @@ const SOURCE_RANK: Record<RawShortcut['source'], number> = {
 }
 
 function toShortcut(raw: RawShortcut, platform: Platform): Shortcut | null {
+  // Screen-reader commands supply an explicit, verbatim label that is used as
+  // both the display combo and the dedupe id, since their keystrokes (reader
+  // key, numpad keys, multi-step sequences) do not fit the key/modifier model
+  // and must render with fixed notation regardless of host platform.
+  if (raw.keystroke) {
+    return {
+      id: `${raw.segment}|${raw.appId ?? 'os'}|${raw.keystroke}`.toLowerCase(),
+      key: '',
+      modifiers: [],
+      comboLabel: raw.keystroke,
+      segment: raw.segment,
+      source: raw.source,
+      origin: raw.origin,
+      confidence: raw.confidence ?? 'declared',
+      scope: raw.scope ?? SEGMENT_SCOPE[raw.segment],
+      appId: raw.appId,
+      appName: raw.appName,
+      description: raw.description,
+      enabled: raw.enabled ?? true
+    }
+  }
+
   const key = normalizeKeyToken(raw.key)
   if (!key) return null
   const modifiers = canonicalizeModifiers(raw.modifiers)
@@ -32,6 +56,8 @@ function toShortcut(raw: RawShortcut, platform: Platform): Shortcut | null {
     segment: raw.segment,
     source: raw.source,
     origin: raw.origin,
+    confidence: raw.confidence ?? 'declared',
+    scope: raw.scope ?? SEGMENT_SCOPE[raw.segment],
     appId: raw.appId,
     appName: raw.appName,
     description: raw.description,

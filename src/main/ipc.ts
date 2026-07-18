@@ -4,10 +4,24 @@ import { IPC } from '@shared/ipc'
 import type { ScanOptions } from '@shared/scan'
 import { getProvider } from './providers'
 import { runScan, type Cancellation } from './core/scan-runner'
+import { aggregate } from './core/aggregate'
+import { getScreenReaderShortcuts } from './core/screen-readers'
 import { foreground } from './core/foreground'
-import { popoverState, setScanning } from './window'
+import { popoverState, setScanning, setPinned } from './window'
 
 const ALLOWED_EXTERNAL = /^(https?:|x-apple\.systempreferences:|ms-settings:)/i
+
+/**
+ * Reduces a renderer-supplied name to a safe JSON basename, guarding against
+ * path separators and stray characters. Falls back to a generic name.
+ */
+function sanitizeFileName(name: unknown): string {
+  const fallback = 'shortcuts.json'
+  if (typeof name !== 'string') return fallback
+  const base = name.replace(/[^a-zA-Z0-9._-]/g, '').replace(/^\.+/, '')
+  if (!base) return fallback
+  return base.toLowerCase().endsWith('.json') ? base : `${base}.json`
+}
 
 /**
  * Asks the user to confirm the disruptive full scan. Returns true to proceed
@@ -16,10 +30,10 @@ const ALLOWED_EXTERNAL = /^(https?:|x-apple\.systempreferences:|ms-settings:)/i
 async function confirmFullScan(win: BrowserWindow | null): Promise<boolean> {
   const options = {
     type: 'warning' as const,
-    buttons: ['Scan all apps', 'Frontmost only'],
+    buttons: ['Scan all open apps', 'Frontmost only'],
     defaultId: 0,
     cancelId: 1,
-    title: 'Scan all apps?',
+    title: 'Scan all open apps?',
     message: 'Scanning all apps briefly activates each open app.',
     detail:
       'Each running app is brought to the foreground for a moment to read its menu shortcuts, then the app you were using is restored. This can be disruptive.'
@@ -67,6 +81,14 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     if (activeCancel) activeCancel.cancelled = true
   })
 
+  ipcMain.handle(IPC.readerShortcuts, () => {
+    const provider = getProvider()
+    return {
+      platform: provider.platform,
+      shortcuts: aggregate(getScreenReaderShortcuts(), provider.platform)
+    }
+  })
+
   ipcMain.handle(IPC.permissionStatus, () => getProvider().permissionStatus())
 
   ipcMain.handle(IPC.requestPermission, () => getProvider().requestPermission())
@@ -82,12 +104,18 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     app.quit()
   })
 
-  ipcMain.handle(IPC.exportJson, async (_event, json: string) => {
+  ipcMain.handle(IPC.setAlwaysOnTop, (_event, pinned: boolean) => {
+    const win = getWindow()
+    if (!win) return false
+    return setPinned(win, Boolean(pinned))
+  })
+
+  ipcMain.handle(IPC.exportJson, async (_event, json: string, fileName: string) => {
     if (typeof json !== 'string') return false
     const win = getWindow()
     const options = {
       title: 'Export shortcuts',
-      defaultPath: 'what-cant-i-press-shortcuts.json',
+      defaultPath: sanitizeFileName(fileName),
       filters: [{ name: 'JSON', extensions: ['json'] }]
     }
     // Keep the popover from blur-hiding while the save dialog is open.

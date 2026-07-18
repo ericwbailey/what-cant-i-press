@@ -1,5 +1,5 @@
 import type { RawShortcut, Platform } from '@shared/shortcuts'
-import type { PermissionStatus } from '@shared/scan'
+import type { CoverageGap, PermissionStatus } from '@shared/scan'
 import type { PlatformProvider, RunningApp } from './types'
 
 /**
@@ -24,6 +24,9 @@ export function createNullProvider(platform: Platform): PlatformProvider {
     },
     async activateApp(): Promise<void> {
       // no-op
+    },
+    async readCoverageGaps(): Promise<CoverageGap[]> {
+      return []
     },
     async permissionStatus(): Promise<PermissionStatus> {
       return { accessibility: 'not-required' }

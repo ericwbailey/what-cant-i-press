@@ -41,7 +41,7 @@ export function getCuratedShortcuts(apps: RunningApp[], platform: Platform): Raw
         appId: match.id,
         appName: entry.appName,
         description: sc.description,
-        enabled: sc.defaultEnabled ?? true
+        enabled: true
       })
     }
   }

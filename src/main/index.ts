@@ -1,12 +1,15 @@
-import { app, Tray, type BrowserWindow } from 'electron'
+import { app, Menu, Tray, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
+import { IPC, type MenuCommand } from '@shared/ipc'
 import { createTrayIcon } from './icon'
-import { createPopoverWindow, positionPopover } from './window'
+import { createAboutWindow, createPopoverWindow, positionPopover, popoverState } from './window'
 import { registerIpc } from './ipc'
 import { getProvider } from './providers'
 import { foreground } from './core/foreground'
+import { initAutoUpdater, checkForUpdatesManually } from './updater'
 
 let tray: Tray | null = null
 let popover: BrowserWindow | null = null
+let aboutWindow: BrowserWindow | null = null
 
 /**
  * Captures the app that is frontmost right now — before our popover shows and
@@ -23,6 +26,14 @@ async function captureForegroundApp(): Promise<void> {
   }
 }
 
+/** Positions and reveals the popover. Does not capture the frontmost app. */
+function showPopover(): void {
+  if (!popover || !tray) return
+  positionPopover(popover, tray)
+  popover.show()
+  popover.focus()
+}
+
 async function togglePopover(): Promise<void> {
   if (!popover || !tray) return
   if (popover.isVisible()) {
@@ -30,9 +41,60 @@ async function togglePopover(): Promise<void> {
     return
   }
   await captureForegroundApp()
-  positionPopover(popover, tray)
-  popover.show()
-  popover.focus()
+  showPopover()
+}
+
+/**
+ * Forwards a tray-menu action to the renderer, which owns the scan/export/pin
+ * logic and state. Reveals the popover first so results, progress, and dialogs
+ * are visible.
+ */
+function runMenuCommand(command: MenuCommand): void {
+  if (!popover) return
+  showPopover()
+  popover.webContents.send(IPC.menuCommand, command)
+}
+
+/**
+ * Opens the About window, or focuses it if already open. The window renders the
+ * app name, version, a "Website" link (underlined plain text) that opens the
+ * repo in the browser, and the author. A single instance is reused.
+ */
+function showAbout(): void {
+  if (aboutWindow && !aboutWindow.isDestroyed()) {
+    aboutWindow.focus()
+    return
+  }
+  aboutWindow = createAboutWindow()
+  aboutWindow.on('closed', () => {
+    aboutWindow = null
+  })
+}
+
+/**
+ * Builds and shows the tray context menu. Must run synchronously: on macOS the
+ * status-item right-click is serviced inside a native mouse-tracking loop, and
+ * popping the menu after an `await` misses that window, so the menu never
+ * appears. Frontmost-app capture is therefore kicked off without blocking — it
+ * resolves well before any menu item triggers a scan (the scan reads
+ * `foreground.app` only after a renderer round-trip). The menu is rebuilt on
+ * each open so the Pin/Unpin label reflects the current pinned state.
+ */
+function showTrayMenu(): void {
+  if (!tray) return
+  void captureForegroundApp()
+  const template: MenuItemConstructorOptions[] = [
+    { label: 'Scan last focused app', click: () => runMenuCommand('scan-frontmost') },
+    { label: 'Scan all open apps', click: () => runMenuCommand('scan-all') },
+    { type: 'separator' },
+    { label: 'Export JSON', click: () => runMenuCommand('export') },
+    { label: popoverState.pinned ? 'Unpin' : 'Pin', click: () => runMenuCommand('toggle-pin') },
+    { type: 'separator' },
+    { label: 'Check for updates', click: () => checkForUpdatesManually() },
+    { label: 'About', click: () => showAbout() },
+    { label: 'Quit', click: () => app.quit() }
+  ]
+  tray.popUpContextMenu(Menu.buildFromTemplate(template))
 }
 
 app.whenReady().then(() => {
@@ -45,8 +107,19 @@ app.whenReady().then(() => {
 
   tray = new Tray(createTrayIcon())
   tray.setToolTip("What Can't I Press")
-  tray.on('click', togglePopover)
-  tray.on('right-click', togglePopover)
+  tray.on('click', (event) => {
+    // Control-click on macOS is a secondary click: show the context menu, the
+    // same as a right-click, instead of toggling the popover.
+    if (process.platform === 'darwin' && event.ctrlKey) {
+      showTrayMenu()
+      return
+    }
+    void togglePopover()
+  })
+  tray.on('right-click', showTrayMenu)
+
+  // Background update checks (Windows packaged builds only; see updater.ts).
+  initAutoUpdater()
 })
 
 // Keep running as a background menu-bar app even with no visible windows.

@@ -39,12 +39,27 @@ export type ShortcutSegment =
   | 'global-os' // reserved system-wide by the OS, always
   | 'global-app' // reserved system-wide by a running app (works when unfocused)
   | 'focused-menu' // reserved by an app only while that app is frontmost
+  | 'screen-reader' // reserved by a screen reader while it is running
 
 /** How the shortcut was obtained. */
 export type ShortcutSource = 'detected' | 'curated'
 
 /** Whether the shortcut belongs to the OS or a specific application. */
 export type ShortcutOrigin = 'os' | 'app'
+
+/**
+ * Reliability of the shortcut record. `declared` values are recovered with high
+ * reliability from a menu/accelerator/resource/manual (every enumerated shortcut
+ * this app emits). `inferred` marks a coverage-gap marker whose exact key values
+ * are not statically resolvable (e.g. runtime `RegisterEventHotKey` registrations).
+ */
+export type ShortcutConfidence = 'declared' | 'inferred'
+
+/**
+ * Where a shortcut is reserved: `app` while its app is frontmost, `global`
+ * system-wide regardless of focus, `unknown` when it cannot be determined.
+ */
+export type ShortcutScope = 'app' | 'global' | 'unknown'
 
 /**
  * Raw shortcut emitted by a platform provider or the curated database, before
@@ -60,6 +75,24 @@ export interface RawShortcut {
   appName?: string
   description?: string
   enabled?: boolean
+  /**
+   * Reliability of this record. Defaults to `declared` during aggregation when a
+   * provider does not set it.
+   */
+  confidence?: ShortcutConfidence
+  /**
+   * Reservation scope. Defaults to the segment's scope (see {@link SEGMENT_SCOPE})
+   * during aggregation when a provider does not set it.
+   */
+  scope?: ShortcutScope
+  /**
+   * Explicit, verbatim combo label. When set, it is used directly as the display
+   * combo and dedupe key instead of deriving one from `key` + `modifiers`. Used
+   * by screen-reader commands whose keystrokes (reader key, numpad keys,
+   * multi-step sequences) do not fit the key/modifier model and must render with
+   * fixed notation regardless of host platform.
+   */
+  keystroke?: string
 }
 
 /** A normalized, display-ready shortcut. */
@@ -75,6 +108,10 @@ export interface Shortcut {
   segment: ShortcutSegment
   source: ShortcutSource
   origin: ShortcutOrigin
+  /** Reliability of this record: `declared` for every enumerated shortcut. */
+  confidence: ShortcutConfidence
+  /** Reservation scope, derived from {@link SEGMENT_SCOPE}. */
+  scope: ShortcutScope
   appId?: string
   appName?: string
   description?: string
@@ -103,10 +140,7 @@ export function canonicalizeModifiers(modifiers: Modifier[]): Modifier[] {
 export function normalizeKeyToken(raw: string): string {
   if (!raw) return ''
   if (raw === ' ') return 'Space'
-  if (raw.length === 1) {
-    const upper = raw.toUpperCase()
-    return upper
-  }
+  if (raw.length === 1) return raw.toUpperCase()
   return raw
 }
 
@@ -231,7 +265,20 @@ export function buildShortcutId(
 
 /** Human-friendly section titles per segment. */
 export const SEGMENT_LABELS: Record<ShortcutSegment, string> = {
-  'global-os': 'Global: operating system',
-  'global-app': 'Global — app (works when app is not focused)',
-  'focused-menu': 'App menu (works only when that app is focused)'
+  'global-os': 'Global Operating System',
+  'global-app': 'Global - works when app is not focused',
+  'focused-menu': 'App menu',
+  'screen-reader': 'Screen reader'
+}
+
+/**
+ * Reservation scope per segment. `global-app`/`screen-reader` are `global` because
+ * they intercept keys regardless of which app is focused; `focused-menu` is `app`
+ * because it only applies while that app is frontmost.
+ */
+export const SEGMENT_SCOPE: Record<ShortcutSegment, ShortcutScope> = {
+  'global-os': 'global',
+  'global-app': 'global',
+  'focused-menu': 'app',
+  'screen-reader': 'global'
 }

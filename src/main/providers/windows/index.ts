@@ -3,7 +3,7 @@ import { promisify } from 'node:util'
 import { join } from 'node:path'
 import { app } from 'electron'
 import type { Platform, RawShortcut } from '@shared/shortcuts'
-import type { PermissionStatus } from '@shared/scan'
+import type { CoverageGap, PermissionStatus } from '@shared/scan'
 import type { PlatformProvider, RunningApp } from '../types'
 import { parseAcceleratorString } from './accelerators'
 import { windowsOsShortcuts } from './os-shortcuts'
@@ -96,6 +96,11 @@ export class WindowsProvider implements PlatformProvider {
 
   async activateApp(appRef: RunningApp): Promise<void> {
     await runHelper(['activate', String(appRef.pid)])
+  }
+
+  async readCoverageGaps(): Promise<CoverageGap[]> {
+    // Native PE / managed / .asar static flagging is not implemented on Windows.
+    return []
   }
 
   async permissionStatus(): Promise<PermissionStatus> {
