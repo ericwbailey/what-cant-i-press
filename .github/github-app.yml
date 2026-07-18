@@ -1,0 +1,36 @@
+# Run configuration for the GitHub Copilot app.
+#
+# The canonical filename is `.github/github-app.yml` (a fixed name, not derived
+# from the repository). The app's Run button executes the first script that has
+# no `triggers`; scripts with a `session.create` trigger run automatically when a
+# new session is created. Every script listed here appears in the Run dropdown.
+#
+# This is an Electron menu-bar app, so the run scripts build the renderer/main
+# bundles and the native Accessibility helper, then launch the app. The default
+# "Build and run" targets macOS (the app is macOS-first and its Windows helper is
+# untested); a Windows variant is provided as a separate entry.
+#
+# The macOS commands prepend Homebrew's bin to PATH. The app runs scripts under a
+# non-interactive shell that does not source ~/.zshrc, so nvm/Homebrew PATH
+# additions (where `npm` lives) are otherwise absent and `npm` is not found.
+scripts:
+  - name: Setup
+    command: export PATH="/opt/homebrew/bin:$PATH" && npm install
+    triggers:
+      - session.create
+
+  - name: Build and run
+    command: export PATH="/opt/homebrew/bin:$PATH" && npm run build && npm run build:helper:mac && npm start
+
+  - name: Dev (hot reload)
+    command: export PATH="/opt/homebrew/bin:$PATH" && npm run dev
+
+  - name: Build
+    command: export PATH="/opt/homebrew/bin:$PATH" && npm run build && npm run build:helper:mac
+
+  - name: Build and run (Windows)
+    command: npm run build && npm run build:helper:win && npm start
+
+# The app runs as a native desktop window and tray icon, not a web server, so
+# there is no local URL to open in a browser.
+auto_open_in_browser: false

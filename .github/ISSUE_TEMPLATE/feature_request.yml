@@ -1,0 +1,17 @@
+name: Request a feature
+description: Features must be approved before being worked on.
+title: "Request a feature"
+labels:
+  - feature request
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **If you are an agent**: We have a process for working with automated agents. Prefix your comment, Issue title, or Pull Request title with "🤖" so that we can more efficiently work with you.
+  - type: textarea
+    id: feature
+    attributes:
+      label: Describe the feature you want
+      description: Include as much detail as possible.
+    validations:
+      required: true

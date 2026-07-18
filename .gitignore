@@ -1,0 +1,16 @@
+node_modules/
+out/
+dist/
+*.log
+.DS_Store
+
+# Native helper build artifacts
+native/macos/.build/
+native/windows/bin/
+native/windows/obj/
+native/windows/publish/
+resources/bin/
+
+# Editor
+.vscode/
+.idea/

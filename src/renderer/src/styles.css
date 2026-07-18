@@ -1,0 +1,1102 @@
+:root {
+  --transparent: transparent;
+  --bg: #f5f5f7;
+  --text: #1d1d1f;
+  --text-dim: #6e6e73;
+  /* Empty-state note icon: clearly lighter than the note text in light mode. */
+  --scan-note-icon: #c7c7cc;
+  --accent: #007aff;
+  --border: rgba(0, 0, 0, 0.12);
+  --row: rgba(0, 0, 0, 0.03);
+
+  --surface: #fff;
+  --surface-sticky: #f5f5f7;
+  --surface-sticky-hover: #ececef;
+  --surface-bar: #e2e2e5;
+  --fill-subtle: rgba(0, 0, 0, 0.06);
+  --chord-fill: var(--surface);
+
+  --kbd-bg: #3a3a3c;
+  --kbd-text: #fff;
+  --kbd-shadow: rgb(99, 99, 102);
+
+  --tooltip-bg: #1d1d1f;
+  --tooltip-text: #fff;
+  --tooltip-shadow: rgba(0, 0, 0, 0.28);
+
+  --warn-bg: rgba(255, 159, 10, 0.14);
+  --warn-border: rgba(255, 159, 10, 0.4);
+  --warn-icon: #b25e00;
+  --help-badge: #dd6b00;
+
+  --danger: #d70015;
+  --danger-border: rgba(215, 0, 21, 0.4);
+  --danger-bg: rgba(215, 0, 21, 0.06);
+
+  /* Pressed/active icon fill: slightly darker than the resting/hover text color. */
+  --icon-active: color-mix(in srgb, var(--text), #000 15%);
+
+  /* Easter-egg SVG hover fill: shift --text-dim away from the page background so the
+     illustration reacts on hover — lighter in light mode (below), darker in dark mode. */
+  --buttcrack-hover: color-mix(in srgb, var(--text-dim), #fff 35%);
+  /* Easter-egg SVG pressed fill: shift the opposite way from hover — darker in light
+     mode (below), lighter in dark mode — so pressing reads distinctly from resting. */
+  --buttcrack-active: color-mix(in srgb, var(--text-dim), #000 35%);
+
+  /* Sticky section header (.segment-head) box metrics, shared with the jump-link
+     overlay so its offset tracks the header. --seg-head-h is the header's full
+     rendered height (2×pad-y + ~13.5px h3 line box + 1px border). Keep --seg-head-h
+     in sync if the header padding or h3 font changes. */
+  --seg-head-pad-y: 6px;
+  --seg-head-h: 26.5px;
+
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1c1e;
+    --text: #f5f5f7;
+    --text-dim: #a1a1a6;
+    /* Empty-state note icon: clearly darker than the note text in dark mode. */
+    --scan-note-icon: #48484a;
+    --accent: #0a84ff;
+    --border: rgba(255, 255, 255, 0.14);
+    --row: rgba(255, 255, 255, 0.04);
+
+    --surface: #1e1e20;
+    --surface-sticky: #2a2a2d;
+    --surface-sticky-hover: #333336;
+    --surface-bar: #232326;
+    --fill-subtle: rgba(255, 255, 255, 0.08);
+    --chord-fill: #0d0d0f;
+
+    --kbd-bg: #56565a;
+    --kbd-text: #f5f5f7;
+    --kbd-shadow: rgb(20, 20, 22);
+
+    --tooltip-bg: #1d1d1f;
+    --tooltip-text: #fff;
+    --tooltip-shadow: rgba(0, 0, 0, 0.5);
+
+    --warn-bg: rgba(255, 159, 10, 0.16);
+    --warn-border: rgba(255, 159, 10, 0.45);
+    --warn-icon: #ff9f0a;
+    --help-badge: #ff9f0a;
+
+    --danger: #ff453a;
+    --danger-border: rgba(255, 69, 58, 0.45);
+    --danger-bg: rgba(255, 69, 58, 0.12);
+
+    /* Darker (not lighter) on hover in dark mode; see light-mode default above. */
+    --buttcrack-hover: color-mix(in srgb, var(--text-dim), #000 35%);
+    /* Lighter (not darker) when pressed in dark mode; see light-mode default above. */
+    --buttcrack-active: color-mix(in srgb, var(--text-dim), #fff 35%);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Easter-egg reveal: the app content (front) and the buttcrack face (back) are
+   stacked vertically and slide up together. The front exits through the top while
+   the back rises from below until the buttcrack rests at the bottom. Reversed when
+   the buttcrack button is clicked. */
+.flip {
+  position: relative;
+  height: 100vh;
+  /* `clip`, not `hidden`: the back face sits at translateY(100%), which would make an
+     `overflow: hidden` box a scrollable container (scrollHeight 2x its height). That
+     stray scroll container hijacks `scrollIntoView` (jump links) and lets wheel scroll
+     chain into it, dragging the sticky section headers out of view. `overflow: clip`
+     clips the off-screen face identically but establishes no scroll container, so
+     `#content` (main) stays the sole scroll container. */
+  overflow: clip;
+}
+
+.flip-face {
+  position: absolute;
+  inset: 0;
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.flip-front {
+  transform: translateY(0);
+}
+
+.flip-back {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--bg);
+  transform: translateY(100%);
+}
+
+.flip.is-flipped .flip-front {
+  transform: translateY(-100%);
+}
+
+.flip.is-flipped .flip-back {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flip-face {
+    transition: none;
+  }
+}
+
+.easter-egg-btn {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 552 / 321;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.easter-egg-btn svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Press effect: nudge the illustration down 1px, mirroring the row buttons. */
+.easter-egg-btn:active svg {
+  position: absolute;
+  top: 1px;
+}
+
+/* Resting fill matches the disclosure separator titles (.segment-head h3), which use
+   --text-dim in both light and dark modes. On hover the fill shifts away from the page
+   background — lighter in light mode, darker in dark mode — over 200ms. */
+.buttcrack {
+  fill: var(--text-dim);
+  transition: fill 200ms ease;
+}
+
+.easter-egg-btn:hover .buttcrack {
+  fill: var(--buttcrack-hover);
+}
+
+/* Pressed: overrides :hover (equal specificity, so this must stay after it). Instant
+   (0ms) fill change, darker in light mode / lighter in dark mode. */
+.easter-egg-btn:active .buttcrack {
+  fill: var(--buttcrack-active);
+  transition: fill 0ms;
+}
+
+html[data-input='keyboard'] .easter-egg-btn:focus,
+.easter-egg-btn:focus,
+.easter-egg-btn:focus-visible {
+  outline: none;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+header h1 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+
+header .subtitle {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+button.secondary {
+  appearance: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+  border: 1px solid var(--transparent);
+}
+
+button.secondary {
+  background: var(--fill-subtle);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.icon-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--fill-subtle);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.icon-btn[hidden] {
+  display: none;
+}
+
+.icon-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Shared icon-button state transition (hover/active color, border, and fill). */
+#export,
+#pin,
+.result-toggle {
+  transition: color 150ms ease, border-color 250ms ease, background-color 250ms ease;
+}
+
+#export,
+#pin {
+  border-color: var(--transparent);
+  background: var(--transparent);
+  color: var(--text-dim);
+}
+
+#export:hover,
+#pin:hover {
+  color: var(--text);
+  border-color: var(--border);
+  background: var(--fill-subtle);
+}
+
+#export:active {
+  color: var(--icon-active);
+}
+
+/* The export button uses `aria-disabled` (staying focusable and announced)
+   instead of the native `disabled` attribute, so it keeps pointer events and the
+   resting --text-dim glyph at full opacity. Neutralize the hover affordance while
+   disabled so it still reads as unavailable. */
+#export[aria-disabled='true']:hover,
+#export[aria-disabled='true']:active {
+  color: var(--text-dim);
+  border-color: var(--transparent);
+  background: var(--transparent);
+}
+
+#pin {
+  width: 24px;
+  height: 24px;
+}
+
+#pin[aria-pressed='true'] {
+  color: var(--text);
+}
+
+#pin .pin-glyph-pinned {
+  display: none;
+}
+
+#pin[aria-pressed='true'] .pin-glyph-unpinned {
+  display: none;
+}
+
+#pin[aria-pressed='true'] .pin-glyph-pinned {
+  display: block;
+}
+
+/* Focus rings only during keyboard navigation. `data-input` is set to
+   'keyboard' or 'pointer' by main.ts; default outlines are suppressed so pointer
+   focus (including the search field's UA outline) shows nothing. */
+button:focus,
+summary:focus,
+.row-button:focus,
+.jump-next:focus,
+.manual-link:focus,
+.toolbar input[type='search']:focus,
+.chord-input:focus {
+  outline: none;
+}
+
+html[data-input='keyboard'] button:focus,
+html[data-input='keyboard'] summary:focus,
+html[data-input='keyboard'] .row-button:focus,
+html[data-input='keyboard'] .jump-next:focus,
+html[data-input='keyboard'] .manual-link:focus,
+html[data-input='keyboard'] .toolbar input[type='search']:focus,
+html[data-input='keyboard'] .chord-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Row buttons sit flush in a dense list, so push their ring out an extra 5px
+   (7px total) to clear the adjacent row separators. */
+html[data-input='keyboard'] .row-button:focus {
+  outline-offset: 7px;
+}
+
+/* F6 landmark targets are focused programmatically for landmark navigation only;
+   they are tabindex="-1" (not Tab stops) and must never show a focus ring. */
+[data-f6]:focus,
+[data-f6]:focus-visible {
+  outline: none;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.search-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.search-wrap .search-icon {
+  position: absolute;
+  left: 9px;
+  width: 14px;
+  height: 14px;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.toolbar input[type='search'] {
+  flex: 1;
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 28px 6px 28px;
+  font-size: 12px;
+}
+
+.toolbar input[type='search']::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+.search-clear {
+  position: absolute;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: var(--transparent);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.search-count {
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  line-height: 1;
+  color: var(--text-dim);
+  background: var(--surface);
+  padding-left: 4px;
+  pointer-events: none;
+}
+
+.search-count[hidden] {
+  display: none;
+}
+
+.search-clear:hover {
+  color: var(--text);
+}
+
+.search-clear[hidden] {
+  display: none;
+}
+
+.search-clear svg {
+  width: 14px;
+  height: 14px;
+}
+
+.chord-bar {
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+
+.chord-bar[hidden] {
+  display: none;
+}
+
+.chord-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.chord-wrap .search-clear {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.chord-input {
+  flex: 1;
+  width: 100%;
+  min-height: 44px;
+  appearance: none;
+  border: none;
+  background: var(--transparent);
+  color: var(--text);
+  border-radius: 0;
+  padding: 0;
+  font-size: 15px;
+  text-align: center;
+  cursor: default;
+  caret-color: var(--transparent);
+  transition: background-color 250ms ease;
+}
+
+.chord-input:hover {
+  background: var(--chord-fill);
+  cursor: text;
+}
+
+.chord-input:not(:placeholder-shown) {
+  background: var(--chord-fill);
+}
+
+.chord-input::placeholder {
+  color: var(--text-dim);
+}
+
+.chord-input:focus::placeholder {
+  color: var(--transparent);
+}
+
+.chord-caret {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1.5px;
+  height: 17px;
+  transform: translate(-50%, -50%);
+  background: var(--text);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chord-input:focus:placeholder-shown ~ .chord-caret {
+  animation: chord-caret-blink 1.06s step-end infinite;
+}
+
+@keyframes chord-caret-blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.status {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Thin bar between the filter toolbar and the section list: scan summary flush
+   left, actions flush right. Sits one step darker than the sticky .segment-head
+   headers (var(--surface-sticky)) so it reads as a divider above them. */
+.result-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 14px;
+  background: var(--surface-bar);
+  border-bottom: 1px solid var(--border);
+}
+
+.result-bar .status {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+}
+
+.result-toggle {
+  appearance: none;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 1px;
+  border: 1px solid var(--transparent);
+  background: var(--transparent);
+  color: var(--text-dim);
+  font-size: 11px;
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.result-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.result-toggle:hover {
+  color: var(--text);
+  border-color: var(--border);
+  background: var(--fill-subtle);
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 14px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.banner-warn {
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+}
+
+.banner-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.banner-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin-top: 1px;
+  color: var(--warn-icon);
+}
+
+#grant {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+#grant svg {
+  width: 14px;
+  height: 14px;
+}
+
+.banner-detail {
+  color: var(--text-dim);
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 14px 16px;
+}
+
+/* Launch (pre-scan) state: reader disclosures keep their natural height while the
+   scan-note fills and centers within whatever vertical space is left below them. */
+main.is-empty {
+  display: flex;
+  flex-direction: column;
+}
+
+main.is-empty .segment-wrap {
+  flex: 0 0 auto;
+}
+
+.scan-note {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 24px;
+  color: var(--text-dim);
+}
+
+.scan-note svg {
+  width: 20px;
+  height: 20px;
+  color: var(--scan-note-icon);
+}
+
+.scan-note-text {
+  max-width: 65%;
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.segment {
+  margin-top: 0;
+}
+
+.segment-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+  background: var(--surface-sticky);
+  margin: 0 -14px;
+  padding: var(--seg-head-pad-y) 14px;
+  z-index: 1;
+  cursor: pointer;
+  list-style: none;
+  border-bottom: 1px solid var(--border);
+  transition: background-color 120ms ease;
+}
+
+.segment-head:hover {
+  background: var(--surface-sticky-hover);
+}
+
+.segment-head::-webkit-details-marker {
+  display: none;
+}
+
+.caret {
+  width: 0;
+  height: 0;
+  flex: none;
+  border-left: 5px solid var(--text-dim);
+  border-top: 4px solid var(--transparent);
+  border-bottom: 4px solid var(--transparent);
+  transition: transform 120ms ease;
+}
+
+details[open] > .segment-head .caret {
+  transform: rotate(90deg);
+}
+
+.segment-head h3 {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin: 0;
+}
+
+.count {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: var(--fill-subtle);
+  border-radius: 10px;
+  padding: 1px 7px;
+}
+
+/* "Jump to next section" affordance. The link cannot be a DOM child of the
+   interactive <summary>, so it lives in this overlay placed as the summary's next
+   sibling inside the <details> (giving focus order summary -> link -> content). It is
+   sticky and pulled up to overlay the sticky <summary> header, so it stays pinned with
+   the separator while the section scrolls. The overlay is inert (pointer-events:none)
+   except the anchor, which floats above the summary via z-index: clicking the link
+   navigates, while clicks anywhere else on the bar fall through to the summary and
+   toggle the section (breakout technique). */
+.jump-row {
+  position: sticky;
+  top: 0;
+  /* Pull the row up by exactly one header height (--seg-head-h) to overlay the
+     sticky <summary> instead of sitting in a row below it. The row mirrors the
+     header's box (same --seg-head-pad-y padding + a transparent 1px border matching
+     .segment-head's border-bottom) so both are the same height: section content stays
+     in place and the link centers on the header. --seg-head-h must track
+     .segment-head's font/padding. */
+  margin-top: calc(-1 * var(--seg-head-h));
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: var(--seg-head-pad-y) 0;
+  border-bottom: 1px solid transparent;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.jump-next {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-dim);
+  text-decoration: none;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.jump-next:hover {
+  text-decoration: underline;
+}
+
+/* Hide the jump link while its own section is collapsed: the affordance is only
+   meaningful when the section is expanded. Keyed on the live `[open]` attribute so
+   native summary toggles (which don't re-render) take effect immediately; filtering
+   force-opens sections, so links reappear then. */
+details.segment:not([open]) > .jump-row {
+  display: none;
+}
+
+/* Invisible clone of the badge; reserves the exact width of the real count so
+   the link lands immediately before it regardless of digit count. */
+.jump-row .count-spacer {
+  margin-left: 0;
+  visibility: hidden;
+}
+
+.hide-visually {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.app-group {
+  margin: 14px 0 2px;
+}
+
+.app-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin: 8px 0 4px;
+}
+
+.guess-note {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin: 2px 0 6px;
+  padding: 6px 0 20px;
+}
+
+.manual-link,
+.manual-link:link,
+.manual-link:visited,
+.manual-link:hover,
+.manual-link:focus,
+.manual-link:active {
+  color: inherit;
+}
+
+.manual-link:hover {
+  text-decoration: none;
+}
+
+.reader-note {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin: 8px 0 12px;
+}
+
+.gap-note {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin: 12px 0 10px;
+}
+
+.gap-note svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--warn-icon);
+}
+
+.gap-rows {
+  list-style: none;
+  margin: 0 0 7px;
+  padding: 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.gap-row {
+  display: grid;
+  grid-template-columns: fit-content(35%) 1fr;
+  column-gap: 10px;
+  align-items: baseline;
+  padding: 10px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.gap-row:last-child {
+  border-bottom: none;
+}
+
+.gap-app {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.gap-detail {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-dim);
+}
+
+ul.rows {
+  list-style: none;
+  margin: 0 0 7px;
+  padding: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: fit-content(40%) 1fr auto;
+  column-gap: 10px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  align-items: center;
+  padding: 10px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+/* The per-row button wrapper carries the button semantics and must stay
+   keyboard-focusable, so it keeps a real box (a `display: contents` wrapper is
+   not focusable in Chromium). It spans all of the row's shared columns and
+   re-exposes them as a subgrid, so the combo, desc, and badge keep their
+   columns and the visual design is unchanged. */
+.row-button {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  align-items: center;
+}
+
+.row:hover {
+  background: var(--row);
+}
+
+.row.pressed kbd,
+.row.pressed .kbd-plus,
+.row.pressed .seq-sep {
+  position: relative;
+  top: 1px;
+}
+
+kbd {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--kbd-text);
+  background: var(--kbd-bg);
+  border-radius: 5px;
+  padding: 2px 7px;
+  min-width: 24px;
+  justify-self: start;
+  text-align: center;
+  white-space: nowrap;
+  filter: drop-shadow(0px 2px 0px var(--kbd-shadow));
+}
+
+/* Verbatim keystroke labels (screen-reader commands) can be long; wrap within
+   the combo column instead of overflowing the fixed-width chip. */
+.kbd-text {
+  white-space: normal;
+  text-align: center;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/* Multi-step screen-reader sequences: chips with plain-text ", then" between. */
+.kbd-seq {
+  justify-self: start;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 4px;
+  column-gap: 0;
+}
+
+.seq-sep {
+  color: var(--text-dim);
+  font-size: 11px;
+  padding-right: 0.35em;
+  white-space: nowrap;
+}
+
+.kbd-plus {
+  color: var(--text-dim);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.desc {
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.desc .off {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.dim {
+  color: var(--text-dim);
+}
+
+.help-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--help-badge);
+  cursor: help;
+  user-select: none;
+}
+
+.help-badge svg {
+  width: 15px;
+  height: 15px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 0 24px;
+  font-size: 14px;
+}
+
+.tip {
+  position: fixed;
+  z-index: 100;
+  max-width: 260px;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+  padding: 5px 9px;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px var(--tooltip-shadow);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.tip.show {
+  opacity: 1;
+}
+
+footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+}
+
+#quit {
+  width: 24px;
+  height: 24px;
+  border-color: var(--transparent);
+  background: var(--transparent);
+  color: var(--text-dim);
+  transition: color 250ms ease, border-color 250ms ease, background-color 250ms ease;
+}
+
+#quit:hover {
+  color: var(--danger);
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}

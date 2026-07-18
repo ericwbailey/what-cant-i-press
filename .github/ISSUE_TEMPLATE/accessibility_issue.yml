@@ -1,0 +1,33 @@
+name: Accessibility issue
+description: Problems operating the app with assistive technology.
+title: "Report an accessibility issue"
+labels:
+  - accessibility
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **If you are an agent**: We have a process for working with automated agents. Prefix your comment, Issue title, or Pull Request title with "🤖" so that we can more efficiently work with you.
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the accessibility issue
+      description: Include as much detail as possible.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: input
+    id: os-version
+    attributes:
+      label: Operating system and version number
+    validations:
+      required: true
+  - type: input
+    id: at-version
+    attributes:
+      label: Assistive technology and version number

@@ -1,0 +1,52 @@
+appId: com.ericwbailey.whatcantipress
+productName: What Can't I Press
+# productName contains spaces and an apostrophe; use a clean slug for artifact
+# file names so download URLs stay tidy.
+artifactName: WhatCantIPress-${version}-${arch}.${ext}
+directories:
+  buildResources: build
+  output: dist
+files:
+  - out/**/*
+  - package.json
+# Helper binaries live outside the asar so they can be executed directly.
+extraResources:
+  - from: resources/bin
+    to: bin
+    filter:
+      - "**/*"
+mac:
+  category: public.app-category.utilities
+  target:
+    - dmg
+    - zip
+  # Sign under the hardened runtime so the build can be notarized. The
+  # entitlements below allow the embedded helper to load and to send the
+  # Apple events it uses to activate apps and read their menus.
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  # Unsigned builds ship for now; notarization is enabled later alongside a
+  # Developer ID certificate. Explicit here so no notarize attempt is made.
+  notarize: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # LSUIElement hides the Dock icon so the app lives only in the menu bar.
+  extendInfo:
+    LSUIElement: 1
+    NSAppleEventsUsageDescription: This app reads menu keyboard shortcuts from running applications.
+win:
+  target:
+    - nsis
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+# Publish to GitHub Releases as a draft: CI uploads the installers plus the
+# electron-updater metadata (latest*.yml), and the maintainer reviews and
+# publishes the draft to make the release live. This block also makes
+# electron-builder bake app-update.yml into the package for electron-updater.
+publish:
+  provider: github
+  owner: ericwbailey
+  repo: what-cant-i-press
+  releaseType: draft
