@@ -2,7 +2,7 @@
 
 <h1 align="center">What Can't I Press?</h1>
 
-<p align="center">`macOS`, `Windows` |  <a href="https://github.com/ericwbailey/what-cant-i-press/blob/main/ROADMAP.md">Roadmap</a></p>
+<p align="center"><code>macOS</code>, <code>Windows</code> |  <a href="https://github.com/ericwbailey/what-cant-i-press/blob/main/ROADMAP.md">Roadmap</a></p>
 
 **Helps to show what keyboard shortcuts are already claimed by different screen readers and apps**. This helps to prevent collisions when creating new keybindings. 
 
