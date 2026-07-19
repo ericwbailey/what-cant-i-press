@@ -62,6 +62,35 @@ The keyboard shortcuts the app reads are analyzed locally and shown only to you.
 
 There is no telemetry or analytics. Its only network activity is checking GitHub for new releases and opening links, such as the project page, and that is only triggered by manual activation. 
 
+## FAQ
+
+### Why did you make this?
+
+Manually discovering conflicts is a chore, yet is important work to do to ensure you don't unintentionally override something important. This helps to lower the burden of the act of discovery. 
+
+For more background on this, read [_How an accessibility designer adds keyboard shortcuts to a web app_](https://ericwbailey.website/published/how-an-accessibility-designer-adds-keyboard-shortcuts-to-a-web-app/).
+
+### What about screen reader passthrough keys?
+
+We shouldn't put the burden on the person using assistive technology to use workarounds as much as possible.
+
+### How do I suggest a feature?
+
+[File an Issue that describes this feature](https://github.com/ericwbailey/what-cant-i-press/issues/new?template=feature_request.yml). Be sure to also [reference the project roadmap](https://github.com/ericwbailey/what-cant-i-press/blob/main/ROADMAP.md) before doing so.
+
+### How do I report a bug?
+
+[File an Issue that describes the bug](https://github.com/ericwbailey/what-cant-i-press/issues/new?template=bug_report.yml).
+
+### How do I report an accessibility issue?
+
+[File an Issue that describes the access barrier](https://github.com/ericwbailey/what-cant-i-press/issues/new?template=accessibility_issue.yml).
+
+### Why did you use Electron to make this?
+
+Electron is more mature compared to its counterparts, and allows me to more easily distribute the app across different operating systems.
+
+
 ---
 
 <details>
