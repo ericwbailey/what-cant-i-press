@@ -81,11 +81,67 @@ const KEY_FULL: Record<string, string> = {
   Clear: 'Clear'
 }
 
-function fullComboName(shortcut: Shortcut, platform: Platform): string {
+// Spelled-out combo tokens, one per key: e.g. ['Command', 'S'] or ['Shift',
+// 'Command', 'A']. Used for the hover tooltip and the Control-modified copy.
+function fullComboTokens(shortcut: Shortcut, platform: Platform): string[] {
   const map = platform === 'darwin' ? MOD_FULL_MAC : MOD_FULL_WIN
   const mods = shortcut.modifiers.map((m) => map[m])
   const key = KEY_FULL[shortcut.key] ?? shortcut.key
-  return [...mods, key].join(' + ')
+  return [...mods, key]
+}
+
+function fullComboName(shortcut: Shortcut, platform: Platform): string {
+  return fullComboTokens(shortcut, platform).join(' + ')
+}
+
+const wrapKbd = (token: string): string => `<kbd>${token}</kbd>`
+
+// Split a keystroke-only `comboLabel` into its display steps and keys, wrapping
+// each key via `wrapKey` and keeping ", then" / "twice quickly" as plain text.
+function tokenizeKeystrokeLabel(label: string, wrapKey: (token: string) => string): string {
+  return label
+    .split(', then ')
+    .map((step) => {
+      let core = step
+      let twice = ''
+      if (/(?: \+ | )twice quickly$/.test(core)) {
+        core = core.replace(/(?: \+ | )twice quickly$/, '')
+        twice = ', twice quickly'
+      }
+      const keys = core
+        .split(' + ')
+        .filter((token) => token.length > 0)
+        .map(wrapKey)
+        .join(' + ')
+      return keys + twice
+    })
+    .join(', then ')
+}
+
+// Control-modified copy payload: the combo as literal HTML text with each key
+// wrapped in a `<kbd>` element (e.g. "<kbd>Command</kbd> + <kbd>S</kbd>"). Keyed
+// shortcuts use the spelled-out names; keystroke-only rows (screen-reader
+// commands and verbatim OS labels) wrap each key token in `comboLabel`, keeping
+// the " + ", ", then", and "twice quickly" connectives as plain text.
+function comboKbdHtml(shortcut: Shortcut, platform: Platform): string {
+  if (shortcut.key) return fullComboTokens(shortcut, platform).map(wrapKbd).join(' + ')
+  return tokenizeKeystrokeLabel(shortcut.comboLabel, wrapKbd)
+}
+
+// Shift-modified copy payload: the combo exactly as shown on screen (platform
+// symbols / symbolized reader tokens) wrapped in `<kbd>`, e.g.
+// "<kbd>⌘</kbd> + <kbd>S</kbd>". Mirrors the row's chips. Non-screen-reader
+// keystroke-only rows render their whole label as one chip, so it is wrapped once.
+function comboVisualKbdHtml(shortcut: Shortcut, platform: Platform): string {
+  if (shortcut.key) {
+    return comboTokens(shortcut.key, shortcut.modifiers, platform).map(wrapKbd).join(' + ')
+  }
+  if (shortcut.segment === 'screen-reader') {
+    return tokenizeKeystrokeLabel(shortcut.comboLabel, (token) =>
+      wrapKbd(symbolizeReaderToken(token, shortcut.appName))
+    )
+  }
+  return wrapKbd(shortcut.comboLabel)
 }
 
 const root = document.getElementById('app')
@@ -597,6 +653,12 @@ function rowButton(inner: string, ariaLabel: string): string {
 function renderRow(shortcut: Shortcut, platform: Platform): string {
   const disabled = shortcut.enabled === false ? ' <span class="off">(disabled)</span>' : ''
   const desc = shortcut.description ? escapeHtml(shortcut.description) : '<span class="dim">—</span>'
+  // Payload copied when the row is activated with Control held: the combo with
+  // each key wrapped in a `<kbd>` element. Escaped for the attribute; reading it
+  // back via `dataset.comboKbd` yields the literal "<kbd>…</kbd>" markup.
+  const kbdCombo = escapeHtml(comboKbdHtml(shortcut, platform))
+  // Payload for Shift-activation: the on-screen combo wrapped in `<kbd>`.
+  const visualCombo = escapeHtml(comboVisualKbdHtml(shortcut, platform))
 
   // Keystroke-only entries (screen-reader commands) carry a verbatim label in
   // `comboLabel` and have no key/modifier tokens to format per platform.
@@ -638,7 +700,7 @@ function renderRow(shortcut: Shortcut, platform: Platform): string {
       const inner = `${wrapped}
       <span class="desc">${desc}${disabled}</span>`
       return `
-    <li class="row" data-combo="${label}">
+    <li class="row" data-combo="${label}" data-combo-kbd="${kbdCombo}" data-combo-visual="${visualCombo}">
       ${rowButton(
         inner,
         rowButtonLabel(shortcut.comboLabel, shortcut.description, shortcut.enabled, false)
@@ -651,7 +713,7 @@ function renderRow(shortcut: Shortcut, platform: Platform): string {
       <span class="desc">${desc}${disabled}</span>
       ${badgeHtml}`
     return `
-    <li class="row" data-combo="${label}">
+    <li class="row" data-combo="${label}" data-combo-kbd="${kbdCombo}" data-combo-visual="${visualCombo}">
       ${rowButton(
         inner,
         rowButtonLabel(shortcut.comboLabel, shortcut.description, shortcut.enabled, badgeHtml !== '')
@@ -675,7 +737,7 @@ function renderRow(shortcut: Shortcut, platform: Platform): string {
       <span class="desc">${desc}${disabled}</span>
       ${badgeHtml}`
   return `
-    <li class="row" data-combo="${escapeHtml(shortcut.comboLabel)}">
+    <li class="row" data-combo="${escapeHtml(shortcut.comboLabel)}" data-combo-kbd="${kbdCombo}" data-combo-visual="${visualCombo}">
       ${rowButton(
         inner,
         rowButtonLabel(fullRaw, shortcut.description, shortcut.enabled, badgeHtml !== '')
@@ -1460,12 +1522,28 @@ const PRESS_EFFECT_MS = 120
 // Copy the row's combo to the clipboard, announce it, and play the momentary
 // press effect. Shared by pointer clicks and keyboard activation of the row's
 // button (a role="button" div does not emit a click on Enter/Space by itself).
-function activateRow(row: HTMLElement): void {
-  const combo = row.dataset.combo
+// The modifier held during activation selects the payload: Control copies the
+// spelled-out combo wrapped in `<kbd>`, Shift copies the on-screen combo wrapped
+// in `<kbd>`, and no modifier copies the plain-text combo.
+type CopyMode = 'plain' | 'kbd' | 'visual'
+
+function copyModeFor(event: { ctrlKey: boolean; shiftKey: boolean }): CopyMode {
+  if (event.ctrlKey) return 'kbd'
+  if (event.shiftKey) return 'visual'
+  return 'plain'
+}
+
+function activateRow(row: HTMLElement, mode: CopyMode = 'plain'): void {
+  const combo =
+    mode === 'kbd'
+      ? row.dataset.comboKbd
+      : mode === 'visual'
+        ? row.dataset.comboVisual
+        : row.dataset.combo
   if (!combo) return
   hideTip()
   void navigator.clipboard.writeText(combo)
-  announce('Shortcut copied to clipboard.')
+  announce(mode === 'plain' ? 'Shortcut copied to clipboard.' : 'Shortcut copied to clipboard as kbd HTML.')
 
   // Momentary keypress effect: nudge the chips + connectives down 1px.
   if (pressTimer) window.clearTimeout(pressTimer)
@@ -1481,7 +1559,19 @@ function activateRow(row: HTMLElement): void {
 
 content.addEventListener('click', (event) => {
   const row = (event.target as HTMLElement).closest('.row') as HTMLElement | null
-  if (row) activateRow(row)
+  if (row) activateRow(row, copyModeFor(event))
+})
+
+// macOS delivers a Control-click as a secondary click (a `contextmenu` event, no
+// `click`), so copy the kbd variant from here too. Gated on `ctrlKey` so a plain
+// right-click is left to its default behavior. Shift-click is an ordinary click
+// on every platform, so it is handled by the `click` listener above.
+content.addEventListener('contextmenu', (event) => {
+  if (!event.ctrlKey) return
+  const row = (event.target as HTMLElement).closest('.row') as HTMLElement | null
+  if (!row) return
+  event.preventDefault()
+  activateRow(row, 'kbd')
 })
 
 content.addEventListener('keydown', (event) => {
@@ -1490,7 +1580,7 @@ content.addEventListener('keydown', (event) => {
   const row = button?.closest('.row') as HTMLElement | null
   if (!row) return
   event.preventDefault()
-  activateRow(row)
+  activateRow(row, copyModeFor(event))
 })
 
 // Open the manual link in the OS browser instead of navigating the popover.

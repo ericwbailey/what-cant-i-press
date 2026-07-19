@@ -26,7 +26,9 @@ For example, <kbd>h</kbd> is often used to toggle open help dialogs. <kbd>h</
 
 ### Copy to share
 
-Click a keyboard shortcut row to copy it to your clipboard. 
+- Click a keyboard shortcut row to copy it to your clipboard. 
+- Hold <kbd>Control</kbd> while clicking to copy it as HTML with each key wrapped in a `<kbd>` element, using the spelled-out key names. 
+- Hold <kbd>Shift</kbd> while clicking to copy the same `<kbd>` HTML using the displayed symbols. 
 
 ### Export
 
