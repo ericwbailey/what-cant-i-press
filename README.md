@@ -1,10 +1,8 @@
-<p align="center">
-<img width="340" height="340" alt="An active gas stove burner, as seen from the top." src="https://github.com/user-attachments/assets/320154e2-6ae5-4487-bd96-c45812168670" />
+<p align="center"><img width="340" height="340" alt="An active gas stove burner, as seen from the top." src="https://github.com/user-attachments/assets/320154e2-6ae5-4487-bd96-c45812168670" /></p>
 
-<h1>What Can't I Press?</h1>
+<h1 align="center">What Can't I Press?</h1>
 
-`macOS`, `Windows` |  <a href="https://github.com/ericwbailey/what-cant-i-press/blob/main/ROADMAP.md">Roadmap</a>
-</p>
+<p align="center">`macOS`, `Windows` |  <a href="https://github.com/ericwbailey/what-cant-i-press/blob/main/ROADMAP.md">Roadmap</a></p>
 
 **Helps to show what keyboard shortcuts are already claimed by different screen readers and apps**. This helps to prevent collisions when creating new keybindings. 
 
