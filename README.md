@@ -6,7 +6,7 @@
 
 **Helps to show what keyboard shortcuts are already claimed by different screen readers and apps**. This helps to prevent collisions when creating new keybindings. 
 
-For example, <kbd>h</kbd> is often used to toggle open help dialogs. <kbd>h</kbd> is also the most popular navigation technique used by the two most popular screen readers on the planet. 
+For example, <kbd>h</kbd> is often used to toggle open help dialogs. <kbd>h</kbd> is also [the most popular navigation technique used by the two most popular screen readers on the planet](https://webaim.org/projects/screenreadersurvey10/#finding). 
 
 > [!NOTE]  
 > This app cannot not detect **all** keyboard shortcuts. This is because some keyboard shortcuts can be implemented in a way that scanning cannot detect. **Treat the app as a starting point**.
@@ -90,27 +90,23 @@ We shouldn't put the burden on the person using assistive technology to use work
 
 Electron is more mature compared to its counterparts, and allows me to more easily distribute the app across different operating systems.
 
+### Why can't it detect every keyboard shortcut an app uses?
 
----
+There is no central registry or technique used for declaring keyboard shortcuts. Because of this, some cannot be detected by scanning. This is due to how the keyboard shortcuts have been written in the application's code.
 
-<details>
-<summary>
-ℹ️ <b>How the scan works</b>
-</summary>
-<p><b>macOS</b>:</p>
-<ul>
-  <li>Lists the running app through a small bundled Swift helper.</li>
-  <li>For each app, reads its menu bar with macOS Accessibility services and pulls the shortcut shown next to every menu command.</li>
-  <li>Layers on any custom shortcuts set in System Settings → Keyboard → Keyboard Shortcuts → App Shortcuts — for both the specific app and "All Applications" — which override the app's defaults.</li>
-  <li>Reads the built-in macOS system shortcuts from the symbolic-hotkeys preferences file and decodes each into a key, modifiers, and a plain-English label.</li>
-  <li>Flags apps that register hidden global hotkeys at runtime. Their binary imports <code>RegisterEventHotKey</code> as a coverage gap, since those can't be enumerated.</li>
-</ul>
-<p><b>Windows</b>:</p>
-<ul>
-  <li>Lists the running apps by finding processes that have a visible main window, using the window title as the name.</li>
-  <li>For each app, uses Windows UI Automation to walk its menu bars and read the accelerator key listed on each menu item.</li>
-  <li>Falls back to scanning the whole window when no menu bar is found, and drops duplicate entries.</li>
-  <li>Uses a built-in, hand-maintained list of Windows system shortcuts (<kbd>Win</kbd> + <kbd>E</kbd>, <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Esc</kbd>, <kbd>Alt</kbd> + <kbd>Tab</kbd>, etc.), because Windows exposes no store to read these from.</li>
-  <li>Needs no special permission for normal apps. Apps running as administrator stay unreadable unless this app is also elevated.</li>
-</ul>
-</details>
+### How does the scanning work?
+
+#### macOS
+
+- Lists the running app through a small bundled Swift helper.
+- For each app, reads its menu bar with macOS Accessibility services and pulls the shortcut shown next to every menu command.
+- Layers on any custom shortcuts set in System Settings → Keyboard → Keyboard Shortcuts → App Shortcuts — for both the specific app and "All Applications" — which override the app's defaults.
+- Reads the built-in macOS system shortcuts from the symbolic-hotkeys preferences file and decodes each into a key, modifiers, and a plain-English label.
+- Flags apps that register hidden global hotkeys at runtime. Their binary imports `RegisterEventHotKey` as a coverage gap, since those can't be enumerated.
+
+#### Windows
+
+- Lists the running apps by finding processes that have a visible main window, using the window title as the name.
+- For each app, uses Windows UI Automation to walk its menu bars and read the accelerator key listed on each menu item.
+- Falls back to scanning the whole window when no menu bar is found, and drops duplicate entries.
+- Uses a built-in, hand-maintained list of Windows system shortcuts (<kbd>Win</kbd> + <kbd>E</kbd>, <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Esc</kbd>, <kbd>Alt</kbd> + <kbd>Tab</kbd>, etc.), because Windows exposes no store to read these from.
