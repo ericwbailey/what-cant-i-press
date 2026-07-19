@@ -66,7 +66,7 @@ There is no telemetry or analytics. Its only network activity is checking GitHub
 
 <details>
 <summary>
-How the scan works
+ℹ️ <b>How the scan works</b>
 </summary>
 <p><b>macOS</b>:</p>
 <ul>
