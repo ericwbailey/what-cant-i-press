@@ -9,3 +9,4 @@ Want something that isn't listed? Open a [feature request](https://github.com/er
 - [ ] Register app with Homebrew
 - [ ] Add Orca keyboard shortcuts as a reference
 - [ ] Add support for Linux
+- [ ] Add support for voice commands
