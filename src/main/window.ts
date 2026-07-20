@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, type Tray, screen } from 'electron'
+import { app, BrowserWindow, shell, type Tray, type Rectangle, screen } from 'electron'
 import { join } from 'node:path'
 import { ABOUT_ICON_DATA_URL } from './about-icon'
 
@@ -13,6 +13,9 @@ const WINDOW_BG_LIGHT = '#f5f5f7'
 const TRAY_GAP = 4
 // Minimum margin kept between the popover and the screen work-area edges.
 const SCREEN_MARGIN = 8
+// Largest plausible macOS menu-bar height. A real status item's top sits within
+// this of the display top, so bounds below it are treated as unsettled/invalid.
+const MENU_BAR_MAX_HEIGHT = 48
 
 /**
  * Shared popover state. The window floats above other apps and ignores
@@ -195,39 +198,53 @@ export function setPinned(win: BrowserWindow, pinned: boolean): boolean {
 }
 
 /**
+ * Whether tray bounds are usable as a popover anchor. Rejects a null tray and
+ * the unsettled/implausible geometry seen right after `new Tray()` or when the
+ * status item never renders (observed as `x=0 y=1117 w=32 h=0`). A real macOS
+ * status item has non-zero height and sits at the top of its display, so
+ * zero-height or bottom-edge bounds mean "no usable anchor".
+ */
+function isUsableTrayBounds(bounds: Rectangle | undefined): bounds is Rectangle {
+  if (!bounds || bounds.width <= 0 || bounds.height <= 0) return false
+  if (process.platform !== 'darwin') return true
+  const display = screen.getDisplayMatching(bounds)
+  return bounds.y <= display.bounds.y + MENU_BAR_MAX_HEIGHT
+}
+
+/**
  * Positions the popover relative to the tray icon. On macOS the menu bar is at
  * the top, so the popover drops down from the icon; on Windows the tray sits in
  * the bottom-right, so it rises from the work-area corner.
  *
- * `tray` may be null, or report zero-width bounds when the status item failed to
- * appear or overflowed off the menu bar. In that case the popover is still
- * placed somewhere visible (top-center of the primary display on macOS, the
- * primary work-area corner elsewhere) so the first-run reveal is visible even
- * with no usable status item.
+ * When the tray is null or its bounds are not usable (missing/overflowed status
+ * item, or geometry not yet settled), the popover is instead hung from the
+ * top-right of the primary display just below the menu bar on macOS — where the
+ * status item lives and where the user looks for it — or the primary work-area
+ * corner elsewhere, so the launch reveal is always visible.
  */
 export function positionPopover(win: BrowserWindow, tray: Tray | null): void {
   const winBounds = win.getBounds()
   const trayBounds = tray?.getBounds()
-  const hasTrayAnchor = !!trayBounds && trayBounds.width > 0
+  const anchor = isUsableTrayBounds(trayBounds) ? trayBounds : null
 
   if (process.platform === 'darwin') {
-    if (hasTrayAnchor) {
-      const x = Math.round(trayBounds.x + trayBounds.width / 2 - winBounds.width / 2)
-      const y = Math.round(trayBounds.y + trayBounds.height + TRAY_GAP)
+    if (anchor) {
+      const x = Math.round(anchor.x + anchor.width / 2 - winBounds.width / 2)
+      const y = Math.round(anchor.y + anchor.height + TRAY_GAP)
       win.setPosition(clampX(x, winBounds.width), y, false)
       return
     }
-    // No usable status item: drop from the top-center of the primary display,
+    // No usable status item: hang from the top-right of the primary display,
     // just below the menu bar (workArea.y already excludes it).
     const primary = screen.getPrimaryDisplay().workArea
-    const x = Math.round(primary.x + primary.width / 2 - winBounds.width / 2)
+    const x = Math.round(primary.x + primary.width - winBounds.width - SCREEN_MARGIN)
     win.setPosition(clampX(x, winBounds.width), primary.y + SCREEN_MARGIN, false)
     return
   }
 
   // Windows / Linux: anchor to the display containing the tray, or the primary
   // display when the tray is unavailable.
-  const display = hasTrayAnchor ? screen.getDisplayMatching(trayBounds) : screen.getPrimaryDisplay()
+  const display = anchor ? screen.getDisplayMatching(anchor) : screen.getPrimaryDisplay()
   const workArea = display.workArea
   const x = Math.round(workArea.x + workArea.width - winBounds.width - SCREEN_MARGIN)
   const y = Math.round(workArea.y + workArea.height - winBounds.height - SCREEN_MARGIN)

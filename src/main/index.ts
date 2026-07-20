@@ -6,7 +6,6 @@ import { registerIpc } from './ipc'
 import { getProvider } from './providers'
 import { foreground } from './core/foreground'
 import { log, describeError, logFilePath } from './core/logger'
-import { isFirstLaunch } from './core/settings'
 import { initAutoUpdater, checkForUpdatesManually } from './updater'
 
 let tray: Tray | null = null
@@ -42,6 +41,16 @@ async function togglePopover(): Promise<void> {
     popover.hide()
     return
   }
+  await captureForegroundApp()
+  showPopover()
+}
+
+/**
+ * Reveals the popover in response to a reopen — a second launch while the app is
+ * already running, or a macOS activate. Captures the frontmost app first so a
+ * subsequent "Scan last focused app" targets what the user was using.
+ */
+async function reopenPopover(): Promise<void> {
   await captureForegroundApp()
   showPopover()
 }
@@ -99,7 +108,18 @@ function showTrayMenu(): void {
   tray.popUpContextMenu(Menu.buildFromTemplate(template))
 }
 
+// Single-instance guard: reopening the app from Applications/Finder while it is
+// already running in the menu bar must surface the existing window instead of
+// starting a second, invisible copy. The primary instance receives
+// 'second-instance'; macOS also fires 'activate' on reopen.
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) app.quit()
+
+app.on('second-instance', () => void reopenPopover())
+app.on('activate', () => void reopenPopover())
+
 app.whenReady().then(() => {
+  if (!gotSingleInstanceLock) return
   log(`App ready (log file: ${logFilePath()})`)
 
   // Menu-bar-only app: no Dock icon on macOS.
@@ -134,13 +154,11 @@ app.whenReady().then(() => {
     log(`Tray creation failed: ${describeError(err)}`)
   }
 
-  // First launch of a menu-bar-only app is otherwise silent and invisible:
-  // reveal the popover once so the user gets confirmation the app is running and
-  // learns where it lives.
-  if (isFirstLaunch()) {
-    log('First launch: revealing popover')
-    showPopover()
-  }
+  // Menu-bar-only apps start with no visible window; a missing or notch-hidden
+  // status item then leaves nothing to click. Reveal the popover on every launch
+  // so opening the app always surfaces it.
+  log('Launch: revealing popover')
+  showPopover()
 
   // Background update checks (Windows packaged builds only; see updater.ts).
   initAutoUpdater()
