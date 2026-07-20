@@ -75,8 +75,11 @@ export function createPopoverWindow(): BrowserWindow {
 const ABOUT_URL = 'https://github.com/ericwbailey/what-cant-i-press'
 
 /** Builds the About window's self-contained HTML document. */
-function aboutHtml(version: string): string {
+function aboutHtml(version: string, accelerator: string | null): string {
   const currentYear = new Date().getFullYear()
+  const toggleLine = accelerator
+    ? `<p class="toggle">Toggle: ${formatAccelerator(accelerator)}</p>`
+    : ''
   return `<!doctype html>
 <html>
 <head>
@@ -105,6 +108,7 @@ function aboutHtml(version: string): string {
   h1 { margin: 0 0 6px; font-size: 15px; font-weight: 700; }
   p { margin: 0; }
   .app-icon { width: 80px; height: 80px; margin: 0 0 12px; -webkit-user-drag: none; }
+  .toggle { margin-top: 4px; opacity: 0.7; }
   .author { margin-top: 16px; }
   /* Plain-text link: inherits the body color, underlined. */
   a.website { color: inherit; text-decoration: underline; cursor: pointer; }
@@ -114,6 +118,7 @@ function aboutHtml(version: string): string {
   <img class="app-icon" src="${ABOUT_ICON_DATA_URL}" alt="" aria-hidden="true" width="80" height="80" />
   <h1>What Can't I Press?</h1>
   <p>Version ${version}</p>
+  ${toggleLine}
   <p><a class="website" href="${ABOUT_URL}">Source</a></p>
   <p class="author">Eric Bailey © ${currentYear}</p>
 </body>
@@ -124,8 +129,9 @@ function aboutHtml(version: string): string {
  * Creates the small About window. Its "Source" link is styled as underlined
  * plain text and opens in the user's default browser; the window itself never
  * navigates. Self-contained HTML is loaded from a data URL (no renderer entry).
+ * `accelerator`, when set, is shown so users can find the global toggle shortcut.
  */
-export function createAboutWindow(): BrowserWindow {
+export function createAboutWindow(accelerator: string | null = null): BrowserWindow {
   const win = new BrowserWindow({
     width: ABOUT_WIDTH,
     height: ABOUT_HEIGHT,
@@ -156,7 +162,9 @@ export function createAboutWindow(): BrowserWindow {
   })
 
   win.once('ready-to-show', () => win.show())
-  void win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(aboutHtml(app.getVersion())))
+  void win.loadURL(
+    'data:text/html;charset=utf-8,' + encodeURIComponent(aboutHtml(app.getVersion(), accelerator))
+  )
 
   return win
 }
@@ -196,24 +204,56 @@ export function setPinned(win: BrowserWindow, pinned: boolean): boolean {
  * Positions the popover relative to the tray icon. On macOS the menu bar is at
  * the top, so the popover drops down from the icon; on Windows the tray sits in
  * the bottom-right, so it rises from the work-area corner.
+ *
+ * `tray` may be null, or report zero-width bounds when the status item failed to
+ * appear or overflowed off the menu bar. In that case the popover is still
+ * placed somewhere visible (top-center of the primary display on macOS, the
+ * primary work-area corner elsewhere) so it stays reachable via the global
+ * shortcut even with no usable status item.
  */
-export function positionPopover(win: BrowserWindow, tray: Tray): void {
-  const trayBounds = tray.getBounds()
+export function positionPopover(win: BrowserWindow, tray: Tray | null): void {
   const winBounds = win.getBounds()
+  const trayBounds = tray?.getBounds()
+  const hasTrayAnchor = !!trayBounds && trayBounds.width > 0
 
   if (process.platform === 'darwin') {
-    const x = Math.round(trayBounds.x + trayBounds.width / 2 - winBounds.width / 2)
-    const y = Math.round(trayBounds.y + trayBounds.height + TRAY_GAP)
-    win.setPosition(clampX(x, winBounds.width), y, false)
+    if (hasTrayAnchor) {
+      const x = Math.round(trayBounds.x + trayBounds.width / 2 - winBounds.width / 2)
+      const y = Math.round(trayBounds.y + trayBounds.height + TRAY_GAP)
+      win.setPosition(clampX(x, winBounds.width), y, false)
+      return
+    }
+    // No usable status item: drop from the top-center of the primary display,
+    // just below the menu bar (workArea.y already excludes it).
+    const primary = screen.getPrimaryDisplay().workArea
+    const x = Math.round(primary.x + primary.width / 2 - winBounds.width / 2)
+    win.setPosition(clampX(x, winBounds.width), primary.y + SCREEN_MARGIN, false)
     return
   }
 
-  // Windows / Linux: anchor to the display containing the tray.
-  const display = screen.getDisplayMatching(trayBounds)
+  // Windows / Linux: anchor to the display containing the tray, or the primary
+  // display when the tray is unavailable.
+  const display = hasTrayAnchor ? screen.getDisplayMatching(trayBounds) : screen.getPrimaryDisplay()
   const workArea = display.workArea
   const x = Math.round(workArea.x + workArea.width - winBounds.width - SCREEN_MARGIN)
   const y = Math.round(workArea.y + workArea.height - winBounds.height - SCREEN_MARGIN)
   win.setPosition(x, y, false)
+}
+
+/**
+ * Renders an Electron accelerator for display: menu-style symbols on macOS
+ * (⌘⇧P), a readable plus-form elsewhere (Ctrl+Shift+P).
+ */
+export function formatAccelerator(accelerator: string): string {
+  if (process.platform !== 'darwin') return accelerator.replace('CommandOrControl', 'Ctrl')
+  return accelerator
+    .replace('CommandOrControl', '⌘')
+    .replace('Command', '⌘')
+    .replace('Control', '⌃')
+    .replace('Alt', '⌥')
+    .replace('Option', '⌥')
+    .replace('Shift', '⇧')
+    .replace(/\+/g, '')
 }
 
 function clampX(x: number, width: number): number {

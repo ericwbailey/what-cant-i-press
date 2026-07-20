@@ -1,15 +1,38 @@
-import { app, Menu, Tray, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
+import { app, globalShortcut, Menu, Tray, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
 import { IPC, type MenuCommand } from '@shared/ipc'
 import { createTrayIcon } from './icon'
-import { createAboutWindow, createPopoverWindow, positionPopover, popoverState } from './window'
+import {
+  createAboutWindow,
+  createPopoverWindow,
+  positionPopover,
+  formatAccelerator,
+  popoverState
+} from './window'
 import { registerIpc } from './ipc'
 import { getProvider } from './providers'
 import { foreground } from './core/foreground'
+import { log, describeError, logFilePath } from './core/logger'
+import { isFirstLaunch } from './core/settings'
 import { initAutoUpdater, checkForUpdatesManually } from './updater'
 
 let tray: Tray | null = null
 let popover: BrowserWindow | null = null
 let aboutWindow: BrowserWindow | null = null
+
+/**
+ * Candidate accelerators for the global toggle shortcut, tried in order. The
+ * first not already claimed by another app is registered, so the popover can be
+ * summoned even when the menu-bar status item never appears. The chosen
+ * accelerator is surfaced in the tray menu and the About window.
+ */
+const SHORTCUT_CANDIDATES = [
+  'CommandOrControl+Shift+P',
+  'CommandOrControl+Alt+P',
+  'CommandOrControl+Shift+K',
+  'CommandOrControl+Alt+K'
+]
+
+let activeAccelerator: string | null = null
 
 /**
  * Captures the app that is frontmost right now — before our popover shows and
@@ -28,20 +51,38 @@ async function captureForegroundApp(): Promise<void> {
 
 /** Positions and reveals the popover. Does not capture the frontmost app. */
 function showPopover(): void {
-  if (!popover || !tray) return
+  if (!popover) return
   positionPopover(popover, tray)
   popover.show()
   popover.focus()
 }
 
 async function togglePopover(): Promise<void> {
-  if (!popover || !tray) return
+  if (!popover) return
   if (popover.isVisible()) {
     popover.hide()
     return
   }
   await captureForegroundApp()
   showPopover()
+}
+
+/**
+ * Registers the first available global toggle shortcut, storing it in
+ * `activeAccelerator`. If every candidate is already claimed the failure is
+ * logged but non-fatal — the tray and first-run popover remain.
+ */
+function registerGlobalToggle(): void {
+  for (const accelerator of SHORTCUT_CANDIDATES) {
+    if (globalShortcut.isRegistered(accelerator)) continue
+    const ok = globalShortcut.register(accelerator, () => void togglePopover())
+    if (ok) {
+      activeAccelerator = accelerator
+      log(`Global toggle shortcut registered: ${accelerator}`)
+      return
+    }
+  }
+  log('Global toggle shortcut: no candidate could be registered')
 }
 
 /**
@@ -65,7 +106,7 @@ function showAbout(): void {
     aboutWindow.focus()
     return
   }
-  aboutWindow = createAboutWindow()
+  aboutWindow = createAboutWindow(activeAccelerator)
   aboutWindow.on('closed', () => {
     aboutWindow = null
   })
@@ -83,7 +124,10 @@ function showAbout(): void {
 function showTrayMenu(): void {
   if (!tray) return
   void captureForegroundApp()
+  const openLabel = activeAccelerator ? `Open  ${formatAccelerator(activeAccelerator)}` : 'Open'
   const template: MenuItemConstructorOptions[] = [
+    { label: openLabel, click: () => showPopover() },
+    { type: 'separator' },
     { label: 'Scan last focused app', click: () => runMenuCommand('scan-frontmost') },
     { label: 'Scan all open apps', click: () => runMenuCommand('scan-all') },
     { type: 'separator' },
@@ -98,31 +142,66 @@ function showTrayMenu(): void {
 }
 
 app.whenReady().then(() => {
+  log(`App ready (log file: ${logFilePath()})`)
+
   // Menu-bar-only app: no Dock icon on macOS.
   if (process.platform === 'darwin') app.dock?.hide()
 
   registerIpc(() => popover)
 
   popover = createPopoverWindow()
+  log('Popover window created')
 
-  tray = new Tray(createTrayIcon())
-  tray.setToolTip("What Can't I Press")
-  tray.on('click', (event) => {
-    // Control-click on macOS is a secondary click: show the context menu, the
-    // same as a right-click, instead of toggling the popover.
-    if (process.platform === 'darwin' && event.ctrlKey) {
-      showTrayMenu()
-      return
-    }
-    void togglePopover()
-  })
-  tray.on('right-click', showTrayMenu)
+  // The status item is the primary entry point; guard its creation so a failure
+  // can't leave the app running but invisible. Bounds are logged so a status
+  // item that was created yet not shown (zero width / menu-bar overflow) can be
+  // told apart from one that threw.
+  try {
+    tray = new Tray(createTrayIcon())
+    tray.setToolTip("What Can't I Press")
+    tray.on('click', (event) => {
+      // Control-click on macOS is a secondary click: show the context menu, the
+      // same as a right-click, instead of toggling the popover.
+      if (process.platform === 'darwin' && event.ctrlKey) {
+        showTrayMenu()
+        return
+      }
+      void togglePopover()
+    })
+    tray.on('right-click', showTrayMenu)
+    const b = tray.getBounds()
+    log(`Tray created (bounds x=${b.x} y=${b.y} w=${b.width} h=${b.height})`)
+  } catch (err) {
+    tray = null
+    log(`Tray creation failed: ${describeError(err)}`)
+  }
+
+  // Always give a keyboard path to the popover so a missing status item is not a
+  // dead end.
+  registerGlobalToggle()
+
+  // First launch of a menu-bar-only app is otherwise silent and invisible:
+  // reveal the popover once so the user gets confirmation the app is running and
+  // learns where it lives.
+  if (isFirstLaunch()) {
+    log('First launch: revealing popover')
+    showPopover()
+  }
 
   // Background update checks (Windows packaged builds only; see updater.ts).
   initAutoUpdater()
+}).catch((err) => {
+  // A throw here previously left the app running with no tray, no window, and no
+  // trace; record it instead.
+  log(`Startup failed: ${describeError(err)}`)
 })
 
 // Keep running as a background menu-bar app even with no visible windows.
 app.on('window-all-closed', () => {
   // Intentionally empty: do not quit when the popover is hidden/closed.
+})
+
+// Release the global shortcut(s) on exit.
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
 })
