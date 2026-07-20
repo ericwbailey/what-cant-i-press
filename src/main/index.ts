@@ -5,6 +5,8 @@ import { createAboutWindow, createPopoverWindow, positionPopover, popoverState }
 import { registerIpc } from './ipc'
 import { getProvider } from './providers'
 import { foreground } from './core/foreground'
+import { log, describeError, logFilePath } from './core/logger'
+import { isFirstLaunch } from './core/settings'
 import { initAutoUpdater, checkForUpdatesManually } from './updater'
 
 let tray: Tray | null = null
@@ -28,14 +30,14 @@ async function captureForegroundApp(): Promise<void> {
 
 /** Positions and reveals the popover. Does not capture the frontmost app. */
 function showPopover(): void {
-  if (!popover || !tray) return
+  if (!popover) return
   positionPopover(popover, tray)
   popover.show()
   popover.focus()
 }
 
 async function togglePopover(): Promise<void> {
-  if (!popover || !tray) return
+  if (!popover) return
   if (popover.isVisible()) {
     popover.hide()
     return
@@ -98,28 +100,54 @@ function showTrayMenu(): void {
 }
 
 app.whenReady().then(() => {
+  log(`App ready (log file: ${logFilePath()})`)
+
   // Menu-bar-only app: no Dock icon on macOS.
   if (process.platform === 'darwin') app.dock?.hide()
 
   registerIpc(() => popover)
 
   popover = createPopoverWindow()
+  log('Popover window created')
 
-  tray = new Tray(createTrayIcon())
-  tray.setToolTip("What Can't I Press")
-  tray.on('click', (event) => {
-    // Control-click on macOS is a secondary click: show the context menu, the
-    // same as a right-click, instead of toggling the popover.
-    if (process.platform === 'darwin' && event.ctrlKey) {
-      showTrayMenu()
-      return
-    }
-    void togglePopover()
-  })
-  tray.on('right-click', showTrayMenu)
+  // The status item is the primary entry point; guard its creation so a failure
+  // can't leave the app running but invisible. Bounds are logged so a status
+  // item that was created yet not shown (zero width / menu-bar overflow) can be
+  // told apart from one that threw.
+  try {
+    tray = new Tray(createTrayIcon())
+    tray.setToolTip("What Can't I Press")
+    tray.on('click', (event) => {
+      // Control-click on macOS is a secondary click: show the context menu, the
+      // same as a right-click, instead of toggling the popover.
+      if (process.platform === 'darwin' && event.ctrlKey) {
+        showTrayMenu()
+        return
+      }
+      void togglePopover()
+    })
+    tray.on('right-click', showTrayMenu)
+    const b = tray.getBounds()
+    log(`Tray created (bounds x=${b.x} y=${b.y} w=${b.width} h=${b.height})`)
+  } catch (err) {
+    tray = null
+    log(`Tray creation failed: ${describeError(err)}`)
+  }
+
+  // First launch of a menu-bar-only app is otherwise silent and invisible:
+  // reveal the popover once so the user gets confirmation the app is running and
+  // learns where it lives.
+  if (isFirstLaunch()) {
+    log('First launch: revealing popover')
+    showPopover()
+  }
 
   // Background update checks (Windows packaged builds only; see updater.ts).
   initAutoUpdater()
+}).catch((err) => {
+  // A throw here previously left the app running with no tray, no window, and no
+  // trace; record it instead.
+  log(`Startup failed: ${describeError(err)}`)
 })
 
 // Keep running as a background menu-bar app even with no visible windows.

@@ -13,6 +13,10 @@ For example, <kbd>h</kbd> is often used to toggle open help dialogs. <kbd>h</
 
 ## How to use
 
+### Opening the app
+
+What Can’t I Press lives in your menu bar (macOS) or system tray (Windows)—not the Dock or taskbar. Click its icon to open the popover. It also opens automatically the first time you launch it so you can find it.
+
 ### Scan to discover shortcuts
 
 - Detect shortcuts in the app you had open prior to opening What Can’t I Press, or

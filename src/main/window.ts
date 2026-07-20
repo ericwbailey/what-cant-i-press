@@ -156,7 +156,9 @@ export function createAboutWindow(): BrowserWindow {
   })
 
   win.once('ready-to-show', () => win.show())
-  void win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(aboutHtml(app.getVersion())))
+  void win.loadURL(
+    'data:text/html;charset=utf-8,' + encodeURIComponent(aboutHtml(app.getVersion()))
+  )
 
   return win
 }
@@ -196,20 +198,36 @@ export function setPinned(win: BrowserWindow, pinned: boolean): boolean {
  * Positions the popover relative to the tray icon. On macOS the menu bar is at
  * the top, so the popover drops down from the icon; on Windows the tray sits in
  * the bottom-right, so it rises from the work-area corner.
+ *
+ * `tray` may be null, or report zero-width bounds when the status item failed to
+ * appear or overflowed off the menu bar. In that case the popover is still
+ * placed somewhere visible (top-center of the primary display on macOS, the
+ * primary work-area corner elsewhere) so the first-run reveal is visible even
+ * with no usable status item.
  */
-export function positionPopover(win: BrowserWindow, tray: Tray): void {
-  const trayBounds = tray.getBounds()
+export function positionPopover(win: BrowserWindow, tray: Tray | null): void {
   const winBounds = win.getBounds()
+  const trayBounds = tray?.getBounds()
+  const hasTrayAnchor = !!trayBounds && trayBounds.width > 0
 
   if (process.platform === 'darwin') {
-    const x = Math.round(trayBounds.x + trayBounds.width / 2 - winBounds.width / 2)
-    const y = Math.round(trayBounds.y + trayBounds.height + TRAY_GAP)
-    win.setPosition(clampX(x, winBounds.width), y, false)
+    if (hasTrayAnchor) {
+      const x = Math.round(trayBounds.x + trayBounds.width / 2 - winBounds.width / 2)
+      const y = Math.round(trayBounds.y + trayBounds.height + TRAY_GAP)
+      win.setPosition(clampX(x, winBounds.width), y, false)
+      return
+    }
+    // No usable status item: drop from the top-center of the primary display,
+    // just below the menu bar (workArea.y already excludes it).
+    const primary = screen.getPrimaryDisplay().workArea
+    const x = Math.round(primary.x + primary.width / 2 - winBounds.width / 2)
+    win.setPosition(clampX(x, winBounds.width), primary.y + SCREEN_MARGIN, false)
     return
   }
 
-  // Windows / Linux: anchor to the display containing the tray.
-  const display = screen.getDisplayMatching(trayBounds)
+  // Windows / Linux: anchor to the display containing the tray, or the primary
+  // display when the tray is unavailable.
+  const display = hasTrayAnchor ? screen.getDisplayMatching(trayBounds) : screen.getPrimaryDisplay()
   const workArea = display.workArea
   const x = Math.round(workArea.x + workArea.width - winBounds.width - SCREEN_MARGIN)
   const y = Math.round(workArea.y + workArea.height - winBounds.height - SCREEN_MARGIN)
