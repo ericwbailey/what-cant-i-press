@@ -75,11 +75,8 @@ export function createPopoverWindow(): BrowserWindow {
 const ABOUT_URL = 'https://github.com/ericwbailey/what-cant-i-press'
 
 /** Builds the About window's self-contained HTML document. */
-function aboutHtml(version: string, accelerator: string | null): string {
+function aboutHtml(version: string): string {
   const currentYear = new Date().getFullYear()
-  const toggleLine = accelerator
-    ? `<p class="toggle">Toggle: ${formatAccelerator(accelerator)}</p>`
-    : ''
   return `<!doctype html>
 <html>
 <head>
@@ -108,7 +105,6 @@ function aboutHtml(version: string, accelerator: string | null): string {
   h1 { margin: 0 0 6px; font-size: 15px; font-weight: 700; }
   p { margin: 0; }
   .app-icon { width: 80px; height: 80px; margin: 0 0 12px; -webkit-user-drag: none; }
-  .toggle { margin-top: 4px; opacity: 0.7; }
   .author { margin-top: 16px; }
   /* Plain-text link: inherits the body color, underlined. */
   a.website { color: inherit; text-decoration: underline; cursor: pointer; }
@@ -118,7 +114,6 @@ function aboutHtml(version: string, accelerator: string | null): string {
   <img class="app-icon" src="${ABOUT_ICON_DATA_URL}" alt="" aria-hidden="true" width="80" height="80" />
   <h1>What Can't I Press?</h1>
   <p>Version ${version}</p>
-  ${toggleLine}
   <p><a class="website" href="${ABOUT_URL}">Source</a></p>
   <p class="author">Eric Bailey © ${currentYear}</p>
 </body>
@@ -129,9 +124,8 @@ function aboutHtml(version: string, accelerator: string | null): string {
  * Creates the small About window. Its "Source" link is styled as underlined
  * plain text and opens in the user's default browser; the window itself never
  * navigates. Self-contained HTML is loaded from a data URL (no renderer entry).
- * `accelerator`, when set, is shown so users can find the global toggle shortcut.
  */
-export function createAboutWindow(accelerator: string | null = null): BrowserWindow {
+export function createAboutWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: ABOUT_WIDTH,
     height: ABOUT_HEIGHT,
@@ -163,7 +157,7 @@ export function createAboutWindow(accelerator: string | null = null): BrowserWin
 
   win.once('ready-to-show', () => win.show())
   void win.loadURL(
-    'data:text/html;charset=utf-8,' + encodeURIComponent(aboutHtml(app.getVersion(), accelerator))
+    'data:text/html;charset=utf-8,' + encodeURIComponent(aboutHtml(app.getVersion()))
   )
 
   return win
@@ -208,8 +202,8 @@ export function setPinned(win: BrowserWindow, pinned: boolean): boolean {
  * `tray` may be null, or report zero-width bounds when the status item failed to
  * appear or overflowed off the menu bar. In that case the popover is still
  * placed somewhere visible (top-center of the primary display on macOS, the
- * primary work-area corner elsewhere) so it stays reachable via the global
- * shortcut even with no usable status item.
+ * primary work-area corner elsewhere) so the first-run reveal is visible even
+ * with no usable status item.
  */
 export function positionPopover(win: BrowserWindow, tray: Tray | null): void {
   const winBounds = win.getBounds()
@@ -238,22 +232,6 @@ export function positionPopover(win: BrowserWindow, tray: Tray | null): void {
   const x = Math.round(workArea.x + workArea.width - winBounds.width - SCREEN_MARGIN)
   const y = Math.round(workArea.y + workArea.height - winBounds.height - SCREEN_MARGIN)
   win.setPosition(x, y, false)
-}
-
-/**
- * Renders an Electron accelerator for display: menu-style symbols on macOS
- * (⌘⇧P), a readable plus-form elsewhere (Ctrl+Shift+P).
- */
-export function formatAccelerator(accelerator: string): string {
-  if (process.platform !== 'darwin') return accelerator.replace('CommandOrControl', 'Ctrl')
-  return accelerator
-    .replace('CommandOrControl', '⌘')
-    .replace('Command', '⌘')
-    .replace('Control', '⌃')
-    .replace('Alt', '⌥')
-    .replace('Option', '⌥')
-    .replace('Shift', '⇧')
-    .replace(/\+/g, '')
 }
 
 function clampX(x: number, width: number): number {

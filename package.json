@@ -1,6 +1,6 @@
 {
   "name": "what-cant-i-press",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Menu-bar app that audits reserved keyboard shortcuts across the OS and running apps.",
   "main": "./out/main/index.js",
   "author": "Eric Bailey",

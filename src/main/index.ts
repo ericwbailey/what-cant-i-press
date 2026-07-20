@@ -1,13 +1,7 @@
-import { app, globalShortcut, Menu, Tray, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
+import { app, Menu, Tray, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
 import { IPC, type MenuCommand } from '@shared/ipc'
 import { createTrayIcon } from './icon'
-import {
-  createAboutWindow,
-  createPopoverWindow,
-  positionPopover,
-  formatAccelerator,
-  popoverState
-} from './window'
+import { createAboutWindow, createPopoverWindow, positionPopover, popoverState } from './window'
 import { registerIpc } from './ipc'
 import { getProvider } from './providers'
 import { foreground } from './core/foreground'
@@ -18,21 +12,6 @@ import { initAutoUpdater, checkForUpdatesManually } from './updater'
 let tray: Tray | null = null
 let popover: BrowserWindow | null = null
 let aboutWindow: BrowserWindow | null = null
-
-/**
- * Candidate accelerators for the global toggle shortcut, tried in order. The
- * first not already claimed by another app is registered, so the popover can be
- * summoned even when the menu-bar status item never appears. The chosen
- * accelerator is surfaced in the tray menu and the About window.
- */
-const SHORTCUT_CANDIDATES = [
-  'CommandOrControl+Shift+P',
-  'CommandOrControl+Alt+P',
-  'CommandOrControl+Shift+K',
-  'CommandOrControl+Alt+K'
-]
-
-let activeAccelerator: string | null = null
 
 /**
  * Captures the app that is frontmost right now — before our popover shows and
@@ -68,24 +47,6 @@ async function togglePopover(): Promise<void> {
 }
 
 /**
- * Registers the first available global toggle shortcut, storing it in
- * `activeAccelerator`. If every candidate is already claimed the failure is
- * logged but non-fatal — the tray and first-run popover remain.
- */
-function registerGlobalToggle(): void {
-  for (const accelerator of SHORTCUT_CANDIDATES) {
-    if (globalShortcut.isRegistered(accelerator)) continue
-    const ok = globalShortcut.register(accelerator, () => void togglePopover())
-    if (ok) {
-      activeAccelerator = accelerator
-      log(`Global toggle shortcut registered: ${accelerator}`)
-      return
-    }
-  }
-  log('Global toggle shortcut: no candidate could be registered')
-}
-
-/**
  * Forwards a tray-menu action to the renderer, which owns the scan/export/pin
  * logic and state. Reveals the popover first so results, progress, and dialogs
  * are visible.
@@ -106,7 +67,7 @@ function showAbout(): void {
     aboutWindow.focus()
     return
   }
-  aboutWindow = createAboutWindow(activeAccelerator)
+  aboutWindow = createAboutWindow()
   aboutWindow.on('closed', () => {
     aboutWindow = null
   })
@@ -124,10 +85,7 @@ function showAbout(): void {
 function showTrayMenu(): void {
   if (!tray) return
   void captureForegroundApp()
-  const openLabel = activeAccelerator ? `Open  ${formatAccelerator(activeAccelerator)}` : 'Open'
   const template: MenuItemConstructorOptions[] = [
-    { label: openLabel, click: () => showPopover() },
-    { type: 'separator' },
     { label: 'Scan last focused app', click: () => runMenuCommand('scan-frontmost') },
     { label: 'Scan all open apps', click: () => runMenuCommand('scan-all') },
     { type: 'separator' },
@@ -176,10 +134,6 @@ app.whenReady().then(() => {
     log(`Tray creation failed: ${describeError(err)}`)
   }
 
-  // Always give a keyboard path to the popover so a missing status item is not a
-  // dead end.
-  registerGlobalToggle()
-
   // First launch of a menu-bar-only app is otherwise silent and invisible:
   // reveal the popover once so the user gets confirmation the app is running and
   // learns where it lives.
@@ -199,9 +153,4 @@ app.whenReady().then(() => {
 // Keep running as a background menu-bar app even with no visible windows.
 app.on('window-all-closed', () => {
   // Intentionally empty: do not quit when the popover is hidden/closed.
-})
-
-// Release the global shortcut(s) on exit.
-app.on('will-quit', () => {
-  globalShortcut.unregisterAll()
 })
