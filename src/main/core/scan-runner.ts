@@ -132,9 +132,15 @@ export async function runScan(
 
   const apps = await provider.listRunningApps()
 
+  // Reading an app's menus and activating it require Accessibility. Without it
+  // every menu read fails and activation only spams per-app Automation prompts, so
+  // skip the app sweep and let the banner (driven by `permission`) prompt the user.
+  // Curated + screen-reader shortcuts below need no permission and are still shown.
+  const accessibilityBlocked = permission.accessibility === 'denied'
+
   let appsScanned = 0
   const coverageGaps: CoverageGap[] = []
-  if (!cancel.cancelled) {
+  if (!cancel.cancelled && !accessibilityBlocked) {
     const result =
       options.scanAllApps && apps.length > 0
         ? await scanAllApps(provider, apps, onProgress, cancel, currentApp)

@@ -20,6 +20,14 @@ interface HelperApp {
 
 const HELPER_BINARY = 'shortcut-helper-macos'
 
+// Shown when Accessibility is not granted. Names the remove/re-add remedy because
+// an unsigned build's grant is keyed to a per-build code signature: after an
+// update the app can still appear enabled in the list while the OS no longer
+// trusts it, and only removing and re-adding it re-keys the grant.
+const ACCESSIBILITY_DENIED_DETAILS =
+  'Grant Accessibility in System Settings \u2192 Privacy & Security \u2192 Accessibility. ' +
+  'If \u201cWhat Can\u2019t I Press\u201d is already listed, remove it with the \u201c\u2013\u201d button and add it again, then rescan.'
+
 function helperPath(): string {
   return app.isPackaged
     ? join(process.resourcesPath, 'bin', HELPER_BINARY)
@@ -81,13 +89,10 @@ export class MacProvider implements PlatformProvider {
   }
 
   async permissionStatus(): Promise<PermissionStatus> {
-    const result = await runHelper<{ trusted: boolean }>(['axtrust'])
-    const trusted = result?.trusted ?? systemPreferences.isTrustedAccessibilityClient(false)
+    const trusted = await accessibilityTrusted()
     return {
       accessibility: trusted ? 'granted' : 'denied',
-      details: trusted
-        ? undefined
-        : 'Grant Accessibility access in System Settings → Privacy & Security → Accessibility, then rescan.'
+      details: trusted ? undefined : ACCESSIBILITY_DENIED_DETAILS
     }
   }
 
@@ -96,20 +101,20 @@ export class MacProvider implements PlatformProvider {
     const trusted = systemPreferences.isTrustedAccessibilityClient(true)
     return {
       accessibility: trusted ? 'granted' : 'denied',
-      details: trusted
-        ? undefined
-        : 'Approve the app in System Settings → Privacy & Security → Accessibility, then rescan.'
+      details: trusted ? undefined : ACCESSIBILITY_DENIED_DETAILS
     }
   }
 }
 
 /**
- * Whether the app currently holds Automation (Apple events) permission, probed
- * against System Events without prompting. macOS has no single global Automation
- * grant, so System Events stands in as the representative target. Returns false
- * on any non-granted or unknown state (including the helper being unavailable).
+ * Whether the app currently holds Accessibility permission. Probed through the
+ * Swift helper, which runs in a freshly spawned process, so the result reflects
+ * the CURRENT grant. `systemPreferences.isTrustedAccessibilityClient` is avoided
+ * as the primary source because the long-lived main process caches its trust
+ * value for the process lifetime and does not refresh after the user grants
+ * access; the helper is used as the fallback only when it cannot run.
  */
-export async function automationTrusted(): Promise<boolean> {
-  const result = await runHelper<{ trusted: boolean }>(['autotrust'])
-  return result?.trusted ?? false
+export async function accessibilityTrusted(): Promise<boolean> {
+  const result = await runHelper<{ trusted: boolean }>(['axtrust'])
+  return result?.trusted ?? systemPreferences.isTrustedAccessibilityClient(false)
 }

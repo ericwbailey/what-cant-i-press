@@ -7,7 +7,7 @@ const POPOVER_HEIGHT = 682
 const ABOUT_WIDTH = 340
 const ABOUT_HEIGHT = 332
 const PERMISSIONS_WIDTH = 635
-const PERMISSIONS_HEIGHT = 180
+const PERMISSIONS_HEIGHT = 120
 // Opaque light window background used off-macOS and by the About window; matches
 // the light --bg token so there is no flash before the renderer paints.
 const WINDOW_BG_LIGHT = '#f5f5f7'
@@ -168,10 +168,9 @@ export function createAboutWindow(): BrowserWindow {
   return win
 }
 
-/** Current grant state of the two macOS permissions the scan depends on. */
+/** Current grant state of the macOS permission the scan depends on. */
 export interface PermissionSnapshot {
   accessibility: boolean
-  automation: boolean
 }
 
 const PERMISSION_ROWS = [
@@ -180,12 +179,6 @@ const PERMISSION_ROWS = [
     label: 'Accessibility',
     description: 'Reads menu-bar commands and custom keyboard shortcuts.',
     settingsUrl: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'
-  },
-  {
-    id: 'automation',
-    label: 'Automation',
-    description: 'Briefly activate each running app so its menus can be read.',
-    settingsUrl: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Automation'
   }
 ] as const
 
@@ -280,8 +273,8 @@ function permissionsHtml(): string {
 /**
  * Creates the small, macOS-only Permissions window. It mirrors the About window:
  * self-contained HTML loaded from a data URL, no renderer entry, and link
- * activation routed to the external handler — here the two "Settings" controls
- * deep-link into the relevant System Settings panes. Each row's status light is
+ * activation routed to the external handler — here the "Settings" control
+ * deep-links into the relevant System Settings pane. Each row's status light is
  * driven from the main process via `executeJavaScript` (privileged, so it needs
  * no inline script or preload) and re-read on load, on focus, and on a short
  * interval, so a light turns green shortly after the user grants access and
@@ -322,7 +315,7 @@ export function createPermissionsWindow(
     openExternal(url)
   })
 
-  // Pushes the latest grant state into the two status lights.
+  // Pushes the latest grant state into the status light.
   const refresh = async (): Promise<void> => {
     if (win.isDestroyed()) return
     let snapshot: PermissionSnapshot
@@ -343,7 +336,6 @@ export function createPermissionsWindow(
         }
       };
       set('accessibility', 'Accessibility', ${snapshot.accessibility});
-      set('automation', 'Automation', ${snapshot.automation});
     })()`
     try {
       await win.webContents.executeJavaScript(js)

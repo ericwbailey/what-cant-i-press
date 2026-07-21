@@ -9,6 +9,11 @@ directories:
 files:
   - out/**/*
   - package.json
+# Optional local dev signing: when the SELF_SIGN_IDENTITY env var is set (see the
+# `build:mac:signed` script), this hook re-signs the packaged app and its bundled
+# helper with that identity so macOS TCC grants survive rebuilds. No-op otherwise,
+# so default and CI builds stay ad-hoc.
+afterSign: scripts/afterSign.js
 # Helper binaries live outside the asar so they can be executed directly.
 extraResources:
   - from: resources/bin
@@ -33,7 +38,6 @@ mac:
   # LSUIElement hides the Dock icon so the app lives only in the menu bar.
   extendInfo:
     LSUIElement: 1
-    NSAppleEventsUsageDescription: This app reads menu keyboard shortcuts from running applications.
 win:
   target:
     - nsis
