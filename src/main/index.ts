@@ -1,4 +1,4 @@
-import { app, Menu, Tray, systemPreferences, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
+import { app, Menu, Tray, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
 import { IPC, type MenuCommand } from '@shared/ipc'
 import { createTrayIcon } from './icon'
 import {
@@ -11,7 +11,7 @@ import {
 } from './window'
 import { registerIpc } from './ipc'
 import { getProvider } from './providers'
-import { automationTrusted } from './providers/macos'
+import { automationTrusted, accessibilityTrusted } from './providers/macos'
 import { foreground } from './core/foreground'
 import { log, describeError, logFilePath } from './core/logger'
 import { initAutoUpdater, checkForUpdatesManually } from './updater'
@@ -94,7 +94,7 @@ function showAbout(): void {
 /** Reads the current grant state of the macOS permissions the scan depends on. */
 async function permissionSnapshot(): Promise<PermissionSnapshot> {
   return {
-    accessibility: systemPreferences.isTrustedAccessibilityClient(false),
+    accessibility: await accessibilityTrusted(),
     automation: await automationTrusted()
   }
 }

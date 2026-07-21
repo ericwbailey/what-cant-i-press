@@ -52,6 +52,11 @@ Here is how to enable it when prompted:
 2. Enable **What Can't I Press**.
 3. Reopen the app and scan again.
 
+If the app is already listed and enabled but scanning still reports that
+Accessibility access is needed—which can happen after installing an update—remove
+the **What Can't I Press** entry with the **–** button, add the app again, enable
+it, then reopen and scan.
+
 The full "scan all apps" sweep also sends Apple events to briefly activate each running app—macOS may prompt for Automation permission the first time.
 
 #### Windows
