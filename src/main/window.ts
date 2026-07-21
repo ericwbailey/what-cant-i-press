@@ -6,6 +6,8 @@ const POPOVER_WIDTH = 552
 const POPOVER_HEIGHT = 682
 const ABOUT_WIDTH = 340
 const ABOUT_HEIGHT = 332
+const PERMISSIONS_WIDTH = 635
+const PERMISSIONS_HEIGHT = 180
 // Opaque light window background used off-macOS and by the About window; matches
 // the light --bg token so there is no flash before the renderer paints.
 const WINDOW_BG_LIGHT = '#f5f5f7'
@@ -162,6 +164,223 @@ export function createAboutWindow(): BrowserWindow {
   void win.loadURL(
     'data:text/html;charset=utf-8,' + encodeURIComponent(aboutHtml(app.getVersion()))
   )
+
+  return win
+}
+
+/** Current grant state of the two macOS permissions the scan depends on. */
+export interface PermissionSnapshot {
+  accessibility: boolean
+  automation: boolean
+}
+
+const PERMISSION_ROWS = [
+  {
+    id: 'accessibility',
+    label: 'Accessibility',
+    description: 'Reads menu-bar commands and custom keyboard shortcuts.',
+    settingsUrl: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'
+  },
+  {
+    id: 'automation',
+    label: 'Automation',
+    description: 'Briefly activate each running app so its menus can be read.',
+    settingsUrl: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Automation'
+  }
+] as const
+
+/** Escapes text interpolated into the Permissions HTML. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+/** Builds the Permissions window's self-contained HTML document. */
+function permissionsHtml(): string {
+  const rows = PERMISSION_ROWS.map(
+    (row) => `
+    <li class="perm-row">
+      <div class="perm-text">
+        <h2>${escapeHtml(row.label)}</h2>
+        <span>${escapeHtml(row.description)}</span>
+      </div>
+      <div class="perm-controls">
+        <a class="perm-settings" href="${escapeHtml(row.settingsUrl)}" aria-label="Settings: ${escapeHtml(row.label)}">Settings</a>
+        <span class="perm-status">
+          <span id="state-${row.id}" class="perm-state" aria-label="${escapeHtml(row.label)} disabled">Disabled</span>
+          <span id="light-${row.id}" class="perm-light" aria-hidden="true"></span>
+        </span>
+      </div>
+    </li>`
+  ).join('')
+
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'" />
+<style>
+  :root { color-scheme: light dark; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: Canvas;
+    color: CanvasText;
+    padding: 20px 22px;
+    box-sizing: border-box;
+    line-height: 1.4;
+    font-size: 13px;
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: default;
+  }
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    border: 0; clip: rect(0 0 0 0); clip-path: inset(50%); overflow: hidden; white-space: nowrap;
+  }
+  ul.perm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  li.perm-row { display: flex; align-items: flex-end; gap: 14px; padding: 14px 0; }
+  li.perm-row:first-child { padding-top: 0; }
+  li.perm-row:last-child { padding-bottom: 0; }
+  li.perm-row + li.perm-row { border-top: 1px solid rgba(128, 128, 128, 0.22); }
+  .perm-text { flex: 1 1 auto; min-width: 0; }
+  .perm-text h2 { margin: 0 0 2px; font-size: 14px; font-weight: 600; }
+  .perm-text span { display: block; opacity: 0.65; font-size: 12px; }
+  .perm-controls { flex: 0 0 auto; display: flex; align-items: flex-end; gap: 16px; }
+  a.perm-settings {
+    display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
+    height: 24px; padding: 0 12px; border: 1px solid rgba(128, 128, 128, 0.5); border-radius: 6px;
+    color: inherit; text-decoration: none; font-size: 12px; cursor: pointer; background: transparent;
+  }
+  a.perm-settings:hover { background: rgba(128, 128, 128, 0.14); }
+  .perm-status {
+    display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box;
+    padding: 3px 6px 3px 9px; border: 1px solid rgba(128, 128, 128, 0.3); border-radius: 999px;
+  }
+  .perm-state {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+    opacity: 0.6; white-space: nowrap; min-width: 56px; text-align: left;
+  }
+  .perm-light { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; background: #6b6b6b; }
+  @media (prefers-color-scheme: dark) { .perm-light { background: #000; } }
+  .perm-light.granted { background: #30d158; }
+</style>
+</head>
+<body>
+  <h1 class="visually-hidden">Permissions</h1>
+  <ul class="perm-list">${rows}
+  </ul>
+</body>
+</html>`
+}
+
+/**
+ * Creates the small, macOS-only Permissions window. It mirrors the About window:
+ * self-contained HTML loaded from a data URL, no renderer entry, and link
+ * activation routed to the external handler — here the two "Settings" controls
+ * deep-link into the relevant System Settings panes. Each row's status light is
+ * driven from the main process via `executeJavaScript` (privileged, so it needs
+ * no inline script or preload) and re-read on load, on focus, and on a short
+ * interval, so a light turns green shortly after the user grants access and
+ * returns from System Settings.
+ */
+export function createPermissionsWindow(
+  getSnapshot: () => Promise<PermissionSnapshot>
+): BrowserWindow {
+  const win = new BrowserWindow({
+    width: PERMISSIONS_WIDTH,
+    height: PERMISSIONS_HEIGHT,
+    show: false,
+    resizable: false,
+    fullscreenable: false,
+    maximizable: false,
+    minimizable: false,
+    skipTaskbar: true,
+    title: 'Permissions',
+    backgroundColor: process.platform === 'darwin' ? undefined : WINDOW_BG_LIGHT,
+    webPreferences: { sandbox: true, contextIsolation: true }
+  })
+
+  win.setMenuBarVisibility(false)
+
+  // Route control activation to System Settings / the browser; deny in-window
+  // navigation. The Settings controls use the x-apple.systempreferences scheme.
+  const openExternal = (url: string): void => {
+    if (url.startsWith('https://') || url.startsWith('x-apple.systempreferences:')) {
+      void shell.openExternal(url)
+    }
+  }
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    openExternal(url)
+    return { action: 'deny' }
+  })
+  win.webContents.on('will-navigate', (event, url) => {
+    event.preventDefault()
+    openExternal(url)
+  })
+
+  // Pushes the latest grant state into the two status lights.
+  const refresh = async (): Promise<void> => {
+    if (win.isDestroyed()) return
+    let snapshot: PermissionSnapshot
+    try {
+      snapshot = await getSnapshot()
+    } catch {
+      return
+    }
+    if (win.isDestroyed()) return
+    const js = `(() => {
+      const set = (id, label, granted) => {
+        const light = document.getElementById('light-' + id);
+        if (light) light.classList.toggle('granted', granted);
+        const state = document.getElementById('state-' + id);
+        if (state) {
+          state.textContent = granted ? 'Enabled' : 'Disabled';
+          state.setAttribute('aria-label', label + (granted ? ' enabled' : ' disabled'));
+        }
+      };
+      set('accessibility', 'Accessibility', ${snapshot.accessibility});
+      set('automation', 'Automation', ${snapshot.automation});
+    })()`
+    try {
+      await win.webContents.executeJavaScript(js)
+    } catch {
+      // Window torn down mid-refresh.
+    }
+  }
+
+  // Shrinks the window to fit its content, then reveals it. The content height
+  // depends on how the descriptions wrap (window width, font size, localized
+  // strings), so it is measured after load rather than hard-coded — a fixed
+  // height previously left slack once the descriptions stopped wrapping.
+  const fitAndShow = async (): Promise<void> => {
+    if (win.isDestroyed()) return
+    try {
+      const height = await win.webContents.executeJavaScript(
+        `Math.ceil(document.querySelector('ul.perm-list').getBoundingClientRect().bottom` +
+          ` + parseFloat(getComputedStyle(document.body).paddingBottom))`
+      )
+      if (!win.isDestroyed() && typeof height === 'number' && height > 0) {
+        win.setContentSize(win.getContentBounds().width, height)
+      }
+    } catch {
+      // Fall back to the default height if measurement fails.
+    }
+    if (!win.isDestroyed()) win.show()
+  }
+
+  win.webContents.on('did-finish-load', () => {
+    void refresh()
+    void fitAndShow()
+  })
+  win.on('focus', () => void refresh())
+  const timer = setInterval(() => void refresh(), 2000)
+  win.on('closed', () => clearInterval(timer))
+
+  void win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(permissionsHtml()))
 
   return win
 }

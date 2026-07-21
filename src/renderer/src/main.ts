@@ -874,21 +874,28 @@ function renderAppSection(
 function renderBanner(permission: PermissionStatus): void {
   if (permission.accessibility === 'denied') {
     bannerEl.innerHTML = `
-      <div class="banner banner-warn">
+      <section class="banner banner-warn" aria-labelledby="accessibility-access-needed">
         <div class="banner-body">
           <i data-lucide="triangle-alert" class="banner-icon" aria-hidden="true"></i>
           <div>
-            <strong>Accessibility access needed</strong>
+            <h2 id="accessibility-access-needed" class="banner-title">Accessibility access needed</h2>
             <div class="banner-detail">${escapeHtml(permission.details ?? 'Grant access to read app menu shortcuts.')}</div>
           </div>
         </div>
-        <button class="secondary" id="grant"><i data-lucide="shield-check" aria-hidden="true"></i>Grant access</button>
-      </div>
+        <button class="secondary" id="grant">Grant access</button>
+      </section>
     `
     renderIcons(bannerEl)
     const grant = document.getElementById('grant') as HTMLButtonElement
     grant.addEventListener('click', async () => {
-      await window.shortcutApi.requestPermission()
+      // requestPermission registers the app in the TCC Accessibility list and shows
+      // the native prompt on first run only; macOS never re-shows it once the app is
+      // listed, so also open the Accessibility pane directly so the click always has
+      // a visible effect and the user can toggle the grant.
+      await window.shortcutApi.requestPermission().catch(() => undefined)
+      await window.shortcutApi.openExternal(
+        'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'
+      )
     })
     return
   }

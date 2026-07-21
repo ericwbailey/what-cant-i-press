@@ -1,9 +1,17 @@
-import { app, Menu, Tray, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
+import { app, Menu, Tray, systemPreferences, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
 import { IPC, type MenuCommand } from '@shared/ipc'
 import { createTrayIcon } from './icon'
-import { createAboutWindow, createPopoverWindow, positionPopover, popoverState } from './window'
+import {
+  createAboutWindow,
+  createPermissionsWindow,
+  createPopoverWindow,
+  positionPopover,
+  popoverState,
+  type PermissionSnapshot
+} from './window'
 import { registerIpc } from './ipc'
 import { getProvider } from './providers'
+import { automationTrusted } from './providers/macos'
 import { foreground } from './core/foreground'
 import { log, describeError, logFilePath } from './core/logger'
 import { initAutoUpdater, checkForUpdatesManually } from './updater'
@@ -11,6 +19,7 @@ import { initAutoUpdater, checkForUpdatesManually } from './updater'
 let tray: Tray | null = null
 let popover: BrowserWindow | null = null
 let aboutWindow: BrowserWindow | null = null
+let permissionsWindow: BrowserWindow | null = null
 
 /**
  * Captures the app that is frontmost right now — before our popover shows and
@@ -82,6 +91,31 @@ function showAbout(): void {
   })
 }
 
+/** Reads the current grant state of the macOS permissions the scan depends on. */
+async function permissionSnapshot(): Promise<PermissionSnapshot> {
+  return {
+    accessibility: systemPreferences.isTrustedAccessibilityClient(false),
+    automation: await automationTrusted()
+  }
+}
+
+/**
+ * Opens the macOS-only Permissions window, or focuses it if already open. The
+ * window lists the Accessibility and Automation permissions, each with a control
+ * that deep-links into System Settings and a status light reflecting whether the
+ * permission is granted. A single instance is reused.
+ */
+function showPermissions(): void {
+  if (permissionsWindow && !permissionsWindow.isDestroyed()) {
+    permissionsWindow.focus()
+    return
+  }
+  permissionsWindow = createPermissionsWindow(permissionSnapshot)
+  permissionsWindow.on('closed', () => {
+    permissionsWindow = null
+  })
+}
+
 /**
  * Builds and shows the tray context menu. Must run synchronously: on macOS the
  * status-item right-click is serviced inside a native mouse-tracking loop, and
@@ -102,6 +136,9 @@ function showTrayMenu(): void {
     { label: popoverState.pinned ? 'Unpin' : 'Pin', click: () => runMenuCommand('toggle-pin') },
     { type: 'separator' },
     { label: 'Check for updates', click: () => checkForUpdatesManually() },
+    ...(process.platform === 'darwin'
+      ? [{ label: 'Permissions', click: () => showPermissions() }]
+      : []),
     { label: 'About', click: () => showAbout() },
     { label: 'Quit', click: () => app.quit() }
   ]

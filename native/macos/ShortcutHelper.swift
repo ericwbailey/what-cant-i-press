@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import ApplicationServices
+import CoreServices
 
 // Emits a JSON value to stdout and exits.
 func emit(_ object: Any) -> Never {
@@ -41,6 +42,24 @@ func activate(_ pid: pid_t) -> Never {
 
 func axTrusted() -> Never {
     emit(["trusted": AXIsProcessTrusted()])
+}
+
+// Reports whether the app already holds Automation (Apple events) permission,
+// probed against System Events without prompting. macOS has no global Automation
+// grant, so System Events stands in as the representative target. Only an explicit
+// noErr counts as granted; a not-running target (procNotFound) reads as not granted.
+func automationTrusted() -> Never {
+    var target = AEAddressDesc()
+    let bundleId = Data("com.apple.systemevents".utf8)
+    let created = bundleId.withUnsafeBytes { raw in
+        AECreateDesc(typeApplicationBundleID, raw.baseAddress, bundleId.count, &target)
+    }
+    if created != noErr {
+        emit(["trusted": false])
+    }
+    let status = AEDeterminePermissionToAutomateTarget(&target, typeWildCard, typeWildCard, false)
+    AEDisposeDesc(&target)
+    emit(["trusted": status == noErr])
 }
 
 func copyAttr(_ element: AXUIElement, _ attribute: String) -> CFTypeRef? {
@@ -104,6 +123,8 @@ case "frontmost":
     frontmost()
 case "axtrust":
     axTrusted()
+case "autotrust":
+    automationTrusted()
 case "activate":
     guard args.count >= 3, let pid = Int32(args[2]) else { emit(["error": "missing pid"]) }
     activate(pid)
