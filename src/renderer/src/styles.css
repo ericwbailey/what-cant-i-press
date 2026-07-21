@@ -256,12 +256,19 @@ button.secondary {
   padding: 6px 12px;
   cursor: pointer;
   border: 1px solid var(--transparent);
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 button.secondary {
   background: var(--fill-subtle);
   color: var(--text);
   border-color: var(--border);
+}
+
+#scan-all:hover,
+#scan:hover {
+  background: color-mix(in srgb, var(--bg), var(--text) 10%);
+  border-color: color-mix(in srgb, var(--bg), var(--text) 30%);
 }
 
 button:disabled {
@@ -613,15 +620,15 @@ html[data-input='keyboard'] .row-button:focus {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 10px 14px 0;
+  margin: 10px 14px;
   padding: 10px 12px;
   border-radius: 8px;
   font-size: 12px;
+  color: var(--bg);
 }
 
 .banner-warn {
-  background: var(--warn-bg);
-  border: 1px solid var(--warn-border);
+  background: var(--text);
 }
 
 .banner-body {
@@ -635,7 +642,7 @@ html[data-input='keyboard'] .row-button:focus {
   height: 16px;
   flex: none;
   margin-top: 1px;
-  color: var(--warn-icon);
+  color: var(--bg);
 }
 
 #grant {
@@ -650,8 +657,24 @@ html[data-input='keyboard'] .row-button:focus {
   height: 14px;
 }
 
+.banner-warn #grant {
+  background: var(--bg);
+  color: var(--text);
+  border-color: transparent;
+}
+
+.banner-warn #grant:hover {
+  background: color-mix(in srgb, var(--bg), var(--text) 12%);
+}
+
+.banner-title {
+  margin: 0;
+  padding-top: 1px;
+  font-size: inherit;
+}
+
 .banner-detail {
-  color: var(--text-dim);
+  color: color-mix(in srgb, var(--bg), var(--text) 30%);
   margin-top: 3px;
   line-height: 1.4;
 }
