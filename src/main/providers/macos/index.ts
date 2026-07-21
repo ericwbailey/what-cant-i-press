@@ -118,14 +118,3 @@ export async function accessibilityTrusted(): Promise<boolean> {
   const result = await runHelper<{ trusted: boolean }>(['axtrust'])
   return result?.trusted ?? systemPreferences.isTrustedAccessibilityClient(false)
 }
-
-/**
- * Whether the app currently holds Automation (Apple events) permission, probed
- * against System Events without prompting. macOS has no single global Automation
- * grant, so System Events stands in as the representative target. Returns false
- * on any non-granted or unknown state (including the helper being unavailable).
- */
-export async function automationTrusted(): Promise<boolean> {
-  const result = await runHelper<{ trusted: boolean }>(['autotrust'])
-  return result?.trusted ?? false
-}

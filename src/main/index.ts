@@ -11,7 +11,7 @@ import {
 } from './window'
 import { registerIpc } from './ipc'
 import { getProvider } from './providers'
-import { automationTrusted, accessibilityTrusted } from './providers/macos'
+import { accessibilityTrusted } from './providers/macos'
 import { foreground } from './core/foreground'
 import { log, describeError, logFilePath } from './core/logger'
 import { initAutoUpdater, checkForUpdatesManually } from './updater'
@@ -91,19 +91,18 @@ function showAbout(): void {
   })
 }
 
-/** Reads the current grant state of the macOS permissions the scan depends on. */
+/** Reads the current grant state of the macOS permission the scan depends on. */
 async function permissionSnapshot(): Promise<PermissionSnapshot> {
   return {
-    accessibility: await accessibilityTrusted(),
-    automation: await automationTrusted()
+    accessibility: await accessibilityTrusted()
   }
 }
 
 /**
  * Opens the macOS-only Permissions window, or focuses it if already open. The
- * window lists the Accessibility and Automation permissions, each with a control
- * that deep-links into System Settings and a status light reflecting whether the
- * permission is granted. A single instance is reused.
+ * window lists the Accessibility permission with a control that deep-links into
+ * System Settings and a status light reflecting whether it is granted. A single
+ * instance is reused.
  */
 function showPermissions(): void {
   if (permissionsWindow && !permissionsWindow.isDestroyed()) {

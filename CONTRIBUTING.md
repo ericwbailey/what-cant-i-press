@@ -19,7 +19,7 @@
 
 ## Persistent local permissions (macOS)
 
-macOS ties an Accessibility or Automation (TCC) grant to a binary's
+macOS ties an Accessibility (TCC) grant to a binary's
 code-signing **designated requirement**. An ad-hoc signature — what
 `build:mac` and the released DMGs use — has a requirement pinned to the
 binary's per-build `cdhash`, so every rebuild produces a new requirement and

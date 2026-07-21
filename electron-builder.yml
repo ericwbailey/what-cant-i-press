@@ -38,7 +38,6 @@ mac:
   # LSUIElement hides the Dock icon so the app lives only in the menu bar.
   extendInfo:
     LSUIElement: 1
-    NSAppleEventsUsageDescription: This app reads menu keyboard shortcuts from running applications.
 win:
   target:
     - nsis

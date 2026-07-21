@@ -57,7 +57,7 @@ Accessibility access is needed—which can happen after installing an update—r
 the **What Can't I Press** entry with the **–** button, add the app again, enable
 it, then reopen and scan.
 
-The full "scan all apps" sweep also sends Apple events to briefly activate each running app—macOS may prompt for Automation permission the first time.
+The full "scan all apps" sweep briefly brings each running app to the foreground to read its menus, then restores focus to where it started.
 
 #### Windows
 
