@@ -676,6 +676,8 @@ html[data-input='keyboard'] .row-button:focus {
   gap: 6px;
   flex: none;
   margin-top: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
 }
 
 #grant svg {
