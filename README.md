@@ -119,3 +119,10 @@ There is no central registry or technique used for declaring keyboard shortcuts.
 - For each app, uses Windows UI Automation to walk its menu bars and read the accelerator key listed on each menu item.
 - Falls back to scanning the whole window when no menu bar is found, and drops duplicate entries.
 - Uses a built-in, hand-maintained list of Windows system shortcuts (<kbd>Win</kbd> + <kbd>E</kbd>, <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Esc</kbd>, <kbd>Alt</kbd> + <kbd>Tab</kbd>, etc.), because Windows exposes no store to read these from.
+
+### Where did you source the screen reader keyboard shortcuts from?
+
+- [JAWS](https://support.freedomscientific.com/Content/Documents/Manuals/JAWS/Keystrokes.txt)
+- [Narrator](https://support.microsoft.com/en-us/accessibility/windows/narrator/appendix-b-narrator-keyboard-commands-and-touch-gestures)
+- [NVDA](https://download.nvaccess.org/documentation/userGuide.html)
+- [VoiceOver](https://support.apple.com/en-gb/guide/voiceover/vo14111/mac)
