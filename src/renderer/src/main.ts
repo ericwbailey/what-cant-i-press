@@ -894,7 +894,7 @@ function renderPermissionBanner(): void {
         <i data-lucide="triangle-alert" class="banner-icon" aria-hidden="true"></i>
         <div class="banner-text">
           <h2 id="accessibility-access-needed" class="banner-title">Accessibility access needed</h2>
-          <div class="banner-detail">Grant access to read app menu shortcuts.</div>
+          <div class="banner-detail">Permission need to scan app shortcuts.</div>
           <button class="secondary" id="grant">Grant access</button>
         </div>
       </div>
