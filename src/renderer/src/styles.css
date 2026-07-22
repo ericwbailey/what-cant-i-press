@@ -616,15 +616,36 @@ html[data-input='keyboard'] .row-button:focus {
 }
 
 .banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 10px 14px;
-  padding: 10px 12px;
-  border-radius: 8px;
+  position: relative;
+  padding: 12px 42px 12px 14px;
   font-size: 12px;
   color: var(--bg);
+}
+
+.banner-dismiss {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--bg);
+  cursor: pointer;
+}
+
+.banner-dismiss:hover {
+  background: color-mix(in srgb, var(--bg) 18%, transparent);
+}
+
+.banner-dismiss svg {
+  width: 16px;
+  height: 16px;
 }
 
 .banner-warn {
@@ -635,6 +656,10 @@ html[data-input='keyboard'] .row-button:focus {
   display: flex;
   align-items: flex-start;
   gap: 10px;
+}
+
+.banner-text {
+  min-width: 0;
 }
 
 .banner-icon {
@@ -650,6 +675,7 @@ html[data-input='keyboard'] .row-button:focus {
   align-items: center;
   gap: 6px;
   flex: none;
+  margin-top: 8px;
 }
 
 #grant svg {

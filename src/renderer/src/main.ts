@@ -11,7 +11,7 @@ import {
   Pin,
   Info
 } from 'lucide'
-import type { CoverageGap, PermissionStatus, ScanResult } from '@shared/scan'
+import type { CoverageGap, ScanResult } from '@shared/scan'
 import {
   comboTokens,
   formatCombo,
@@ -871,35 +871,53 @@ function renderAppSection(
   `
 }
 
-function renderBanner(permission: PermissionStatus): void {
-  if (permission.accessibility === 'denied') {
-    bannerEl.innerHTML = `
-      <section class="banner banner-warn" aria-labelledby="accessibility-access-needed">
-        <div class="banner-body">
-          <i data-lucide="triangle-alert" class="banner-icon" aria-hidden="true"></i>
-          <div>
-            <h2 id="accessibility-access-needed" class="banner-title">Accessibility access needed</h2>
-            <div class="banner-detail">${escapeHtml(permission.details ?? 'Grant access to read app menu shortcuts.')}</div>
-          </div>
-        </div>
-        <button class="secondary" id="grant">Grant access</button>
-      </section>
-    `
-    renderIcons(bannerEl)
-    const grant = document.getElementById('grant') as HTMLButtonElement
-    grant.addEventListener('click', async () => {
-      // requestPermission registers the app in the TCC Accessibility list and shows
-      // the native prompt on first run only; macOS never re-shows it once the app is
-      // listed, so also open the Accessibility pane directly so the click always has
-      // a visible effect and the user can toggle the grant.
-      await window.shortcutApi.requestPermission().catch(() => undefined)
-      await window.shortcutApi.openExternal(
-        'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'
-      )
-    })
+const BANNER_DISMISSED_KEY = 'wcip:accessibility-banner-dismissed'
+
+/**
+ * Accessibility banner. Rendered once at launch on macOS and shown until the user
+ * dismisses it; the dismissal persists in localStorage so it never returns. It is
+ * decoupled from scan/permission state, so it no longer appears only after a scan
+ * nor flickers as the result re-renders on every filter keystroke.
+ */
+function renderPermissionBanner(): void {
+  const dismissed = localStorage.getItem(BANNER_DISMISSED_KEY) === '1'
+  if (readerPlatform !== 'darwin' || dismissed) {
+    bannerEl.innerHTML = ''
     return
   }
-  bannerEl.innerHTML = ''
+  bannerEl.innerHTML = `
+    <section class="banner banner-warn" aria-labelledby="accessibility-access-needed">
+      <button class="banner-dismiss" id="banner-dismiss" type="button" aria-label="Dismiss">
+        <i data-lucide="x" aria-hidden="true"></i>
+      </button>
+      <div class="banner-body">
+        <i data-lucide="triangle-alert" class="banner-icon" aria-hidden="true"></i>
+        <div class="banner-text">
+          <h2 id="accessibility-access-needed" class="banner-title">Accessibility access needed</h2>
+          <div class="banner-detail">Grant access to read app menu shortcuts.</div>
+          <button class="secondary" id="grant">Grant access</button>
+        </div>
+      </div>
+    </section>
+  `
+  renderIcons(bannerEl)
+  const grant = document.getElementById('grant') as HTMLButtonElement
+  grant.addEventListener('click', async () => {
+    // requestPermission registers the app in the TCC Accessibility list and shows
+    // the native prompt on first run only; macOS never re-shows it once the app is
+    // listed, so also open the Accessibility pane directly so the click always has
+    // a visible effect and the user can toggle the grant.
+    await window.shortcutApi.requestPermission().catch(() => undefined)
+    await window.shortcutApi.openExternal(
+      'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'
+    )
+  })
+  const dismiss = document.getElementById('banner-dismiss') as HTMLButtonElement
+  dismiss.addEventListener('click', () => {
+    localStorage.setItem(BANNER_DISMISSED_KEY, '1')
+    bannerEl.innerHTML = ''
+    scanButton.focus()
+  })
 }
 
 function emptyFilterMessage(query: string): string {
@@ -1009,8 +1027,6 @@ function renderResult(): void {
   content.classList.remove('is-empty')
   searchCount.textContent = resultsLabel(visible.length)
   searchCount.hidden = query.length === 0 || visible.length === 0
-
-  if (lastResult) renderBanner(lastResult.permission)
 
   if (base.length === 0) {
     content.innerHTML = `${CONTENT_HEADING}<div class="empty-state"><div>No reserved shortcuts found.</div></div>`
@@ -1617,6 +1633,7 @@ async function initReaderSections(): Promise<void> {
   } catch {
     readerShortcuts = []
   }
+  renderPermissionBanner()
   if (!lastResult) renderResult()
 }
 void initReaderSections()
