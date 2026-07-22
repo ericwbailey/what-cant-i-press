@@ -32,6 +32,10 @@ jobs:
     # Publish to the draft release only for tag builds; a manual run just packages.
     env:
       PUBLISH: ${{ startsWith(github.ref, 'refs/tags/') && 'always' || 'never' }}
+      # When the macOS self-signing secret is present, release DMGs are signed with
+      # a persistent self-signed identity so macOS TCC (Accessibility) grants survive
+      # updates. Absent (e.g. forks), the mac build falls back to ad-hoc.
+      HAS_MAC_CERT: ${{ secrets.MAC_SELFSIGN_P12_BASE64 != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -62,13 +66,49 @@ jobs:
         if: matrix.platform == 'win'
         run: npm run build:helper:win
 
+      - name: Import macOS signing certificate
+        if: matrix.platform == 'mac' && env.HAS_MAC_CERT == 'true'
+        env:
+          MAC_CERT_P12_BASE64: ${{ secrets.MAC_SELFSIGN_P12_BASE64 }}
+          MAC_CERT_PASSWORD: ${{ secrets.MAC_SELFSIGN_P12_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN_PATH="$RUNNER_TEMP/wcip-signing.keychain-db"
+          KEYCHAIN_PW="$(openssl rand -hex 20)"
+          CERT_PATH="$RUNNER_TEMP/wcip-cert.p12"
+
+          printf '%s' "$MAC_CERT_P12_BASE64" | base64 --decode > "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -k "$KEYCHAIN_PATH" -P "$MAC_CERT_PASSWORD" -T /usr/bin/codesign -A
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PW" "$KEYCHAIN_PATH" >/dev/null
+          # Add the temp keychain to the search list so codesign (via afterSign) finds it.
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | sed 's/["]//g')
+          rm -f "$CERT_PATH"
+
+          # Sign by the 40-char SHA-1 hash (unambiguous) rather than the common name.
+          IDENTITY_HASH="$(security find-identity -p codesigning "$KEYCHAIN_PATH" | grep -Eo '[0-9A-F]{40}' | head -1)"
+          if [ -z "$IDENTITY_HASH" ]; then echo "No code-signing identity imported" >&2; exit 1; fi
+          echo "MAC_SIGN_IDENTITY=$IDENTITY_HASH" >> "$GITHUB_ENV"
+          echo "Imported signing identity $IDENTITY_HASH"
+
       - name: Package and publish macOS installers
         if: matrix.platform == 'mac'
         run: npx --no-install electron-builder --mac --universal --publish ${{ env.PUBLISH }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Ship unsigned for now; skip the signing-identity search on CI.
+          # electron-builder itself stays ad-hoc (no Developer ID auto-discovery);
+          # the afterSign hook applies the persistent self-signed identity below so
+          # the shipped app has a stable TCC designated requirement. Empty when the
+          # signing secret is absent, so afterSign no-ops and the build stays ad-hoc.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          SELF_SIGN_IDENTITY: ${{ env.MAC_SIGN_IDENTITY }}
+
+      - name: Remove signing keychain
+        if: always() && matrix.platform == 'mac' && env.HAS_MAC_CERT == 'true'
+        run: security delete-keychain "$RUNNER_TEMP/wcip-signing.keychain-db" 2>/dev/null || true
 
       - name: Package and publish Windows installer
         if: matrix.platform == 'win'
