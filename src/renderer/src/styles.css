@@ -749,6 +749,33 @@ main.is-empty .segment-wrap {
   line-height: 1.4;
 }
 
+/* Inline hint above scan results when no last-focused app could be read. Unlike
+   the centered pre-scan .scan-note, this is a compact top-of-list row. */
+.scan-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-dim);
+}
+
+.scan-hint svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: var(--scan-note-icon);
+}
+
+.scan-hint-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .segment {
   margin-top: 0;
 }

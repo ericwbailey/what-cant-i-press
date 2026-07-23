@@ -154,7 +154,7 @@ if (!gotSingleInstanceLock) app.quit()
 app.on('second-instance', () => void reopenPopover())
 app.on('activate', () => void reopenPopover())
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   if (!gotSingleInstanceLock) return
   log(`App ready (log file: ${logFilePath()})`)
 
@@ -192,7 +192,10 @@ app.whenReady().then(() => {
 
   // Menu-bar-only apps start with no visible window; a missing or notch-hidden
   // status item then leaves nothing to click. Reveal the popover on every launch
-  // so opening the app always surfaces it.
+  // so opening the app always surfaces it. Capture the frontmost app first —
+  // before the reveal steals focus — so a "Scan last focused app" run right after
+  // launch targets the app the user was using rather than What Can't I Press.
+  await captureForegroundApp()
   log('Launch: revealing popover')
   showPopover()
 

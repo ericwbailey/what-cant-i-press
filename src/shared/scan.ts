@@ -48,6 +48,13 @@ export interface ScanResult {
   permission: PermissionStatus
   shortcuts: Shortcut[]
   appsScanned: number
+  /**
+   * Name of the app whose menus a frontmost-only scan read, or `null` when no
+   * valid last-focused app could be resolved (e.g. only What Can't I Press itself
+   * was frontmost at launch). Not applicable to a scan-all sweep, which leaves it
+   * `null`. Lets the renderer explain a scan that surfaced no app shortcuts.
+   */
+  frontmostAppName?: string | null
   /** Non-exhaustiveness markers for scanned apps (runtime hotkeys, raw handlers). */
   coverageGaps: CoverageGap[]
 }
