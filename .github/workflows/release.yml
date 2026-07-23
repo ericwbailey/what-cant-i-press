@@ -1,10 +1,13 @@
 name: Release
 
-# Push a semver tag (e.g. v0.1.0) to build signed-later installers and publish a
-# DRAFT GitHub Release with the macOS .dmg/.zip and Windows .exe plus the
-# electron-updater metadata. Review the draft in the Releases tab, then publish
-# it to make the release live. Run manually (workflow_dispatch) to package both
-# platforms as workflow artifacts without publishing.
+# Push a semver tag (e.g. v0.1.0) to build the macOS .dmg/.zip and Windows .exe
+# installers plus the electron-updater metadata (latest*.yml). The build job packages
+# each platform in parallel WITHOUT publishing and uploads the files as workflow
+# artifacts; a single downstream publish job then creates ONE draft GitHub Release and
+# attaches everything at once. Letting electron-builder publish from each matrix job
+# instead races it into creating duplicate drafts (one per platform, and even one per
+# concurrent upload within a job). Review the draft in the Releases tab, then publish it
+# to make the release live. A manual run (workflow_dispatch) only builds artifacts.
 on:
   push:
     tags:
@@ -19,13 +22,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  build:
     strategy:
       fail-fast: false
-      # Run the platforms one at a time so the first build creates the draft
-      # GitHub Release and the second reuses it. Publishing both in parallel races
-      # electron-builder into creating two separate drafts (one per platform).
-      max-parallel: 1
       matrix:
         include:
           - os: macos-14
@@ -33,9 +32,7 @@ jobs:
           - os: windows-latest
             platform: win
     runs-on: ${{ matrix.os }}
-    # Publish to the draft release only for tag builds; a manual run just packages.
     env:
-      PUBLISH: ${{ startsWith(github.ref, 'refs/tags/') && 'always' || 'never' }}
       # When the macOS self-signing secret is present, release DMGs are signed with
       # a persistent self-signed identity so macOS TCC (Accessibility) grants survive
       # updates. Absent (e.g. forks), the mac build falls back to ad-hoc.
@@ -98,9 +95,11 @@ jobs:
           echo "MAC_SIGN_IDENTITY=$IDENTITY_HASH" >> "$GITHUB_ENV"
           echo "Imported signing identity $IDENTITY_HASH"
 
-      - name: Package and publish macOS installers
+      - name: Package macOS installers
         if: matrix.platform == 'mac'
-        run: npx --no-install electron-builder --mac --universal --publish ${{ env.PUBLISH }}
+        # Build only; the publish job creates the single GitHub Release. electron-builder
+        # still writes latest-mac.yml + blockmaps into dist/ under --publish never.
+        run: npx --no-install electron-builder --mac --universal --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # electron-builder itself stays ad-hoc (no Developer ID auto-discovery);
@@ -114,19 +113,70 @@ jobs:
         if: always() && matrix.platform == 'mac' && env.HAS_MAC_CERT == 'true'
         run: security delete-keychain "$RUNNER_TEMP/wcip-signing.keychain-db" 2>/dev/null || true
 
-      - name: Package and publish Windows installer
+      - name: Package Windows installer
         if: matrix.platform == 'win'
-        run: npx --no-install electron-builder --win --publish ${{ env.PUBLISH }}
+        # Build only; the publish job creates the single GitHub Release. electron-builder
+        # still writes latest.yml + blockmaps into dist/ under --publish never.
+        run: npx --no-install electron-builder --win --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload installers (manual run only)
-        if: env.PUBLISH == 'never'
+      - name: Upload macOS installers
+        if: matrix.platform == 'mac'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.platform }}-installers
+          name: installers-mac
           path: |
             dist/*.dmg
             dist/*.zip
+            dist/*.blockmap
+            dist/latest-mac.yml
+          if-no-files-found: error
+
+      - name: Upload Windows installers
+        if: matrix.platform == 'win'
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-win
+          path: |
             dist/*.exe
-          if-no-files-found: warn
+            dist/*.blockmap
+            dist/latest.yml
+          if-no-files-found: error
+
+  publish:
+    # One serial job creates exactly one draft and attaches every platform's files, so
+    # electron-builder never creates the release (that was racing it into duplicates).
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all installers
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: installers-*
+          merge-multiple: true
+
+      - name: Create the single draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # If a draft for this tag already exists (e.g. a re-run), remove it first so we
+          # publish exactly one clean draft. Never touch an already-published release; the
+          # git tag is kept (no --cleanup-tag).
+          if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null || echo missing)" = "true" ]; then
+            echo "Deleting existing draft release $TAG"
+            gh release delete "$TAG" --yes
+          fi
+          echo "Creating draft release $TAG"
+          gh release create "$TAG" \
+            --draft \
+            --title "$TAG" \
+            --generate-notes \
+            dist/*.dmg dist/*.zip dist/*.exe dist/*.blockmap dist/latest*.yml
