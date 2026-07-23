@@ -22,6 +22,10 @@ jobs:
   release:
     strategy:
       fail-fast: false
+      # Run the platforms one at a time so the first build creates the draft
+      # GitHub Release and the second reuses it. Publishing both in parallel races
+      # electron-builder into creating two separate drafts (one per platform).
+      max-parallel: 1
       matrix:
         include:
           - os: macos-14
