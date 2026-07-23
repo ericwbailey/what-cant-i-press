@@ -251,6 +251,15 @@ let readerShortcuts: Shortcut[] = []
 let readerPlatform: Platform = 'darwin'
 /** True until the first scan clears the launch-time collapsed seeding. */
 let seededReaderCollapse = false
+/**
+ * Last known live Accessibility grant (macOS): true granted, false denied, null
+ * until first probed. Drives the permission banner. Refreshed at launch, on window
+ * focus, and after each scan — never on filter keystrokes — so the banner reflects
+ * real state without flickering.
+ */
+let accessibilityGranted: boolean | null = null
+/** Whether the most recent scan was a scan-all sweep (vs frontmost-only). */
+let lastScanAll = false
 
 function escapeHtml(value: string): string {
   return value
@@ -871,17 +880,24 @@ function renderAppSection(
   `
 }
 
-const BANNER_DISMISSED_KEY = 'wcip:accessibility-banner-dismissed'
+/** Whether the accessibility banner was dismissed for the current launch only. */
+let bannerDismissedThisLaunch = false
 
 /**
- * Accessibility banner. Rendered once at launch on macOS and shown until the user
- * dismisses it; the dismissal persists in localStorage so it never returns. It is
- * decoupled from scan/permission state, so it no longer appears only after a scan
- * nor flickers as the result re-renders on every filter keystroke.
+ * Accessibility banner. Driven by the live Accessibility grant: shown on macOS
+ * whenever access is not granted, and hidden as soon as it is. Because it reflects
+ * real permission state rather than a persisted flag, it returns on a fresh
+ * install (and whenever access is later revoked) and never lingers once access is
+ * granted. Dismissal lasts only for the current launch — held in memory, never
+ * persisted — so the banner reappears next launch if access is still missing (and
+ * so a stale "dismissed" flag can no longer survive an uninstall/reinstall). It is
+ * re-rendered only on discrete events (launch, window focus, after a scan), never
+ * on filter keystrokes, so it does not flicker as results re-render.
  */
 function renderPermissionBanner(): void {
-  const dismissed = localStorage.getItem(BANNER_DISMISSED_KEY) === '1'
-  if (readerPlatform !== 'darwin' || dismissed) {
+  const show =
+    readerPlatform === 'darwin' && accessibilityGranted === false && !bannerDismissedThisLaunch
+  if (!show) {
     bannerEl.innerHTML = ''
     return
   }
@@ -914,10 +930,35 @@ function renderPermissionBanner(): void {
   })
   const dismiss = document.getElementById('banner-dismiss') as HTMLButtonElement
   dismiss.addEventListener('click', () => {
-    localStorage.setItem(BANNER_DISMISSED_KEY, '1')
+    bannerDismissedThisLaunch = true
     bannerEl.innerHTML = ''
     scanButton.focus()
   })
+}
+
+/**
+ * Probes the live Accessibility grant and re-renders the banner. Called at launch
+ * and on window focus (covering the return from System Settings after "Grant
+ * access"). A transient probe failure leaves the last known state untouched so the
+ * banner does not flash.
+ */
+async function refreshAccessibilityBanner(): Promise<void> {
+  const prevGranted = accessibilityGranted
+  if (readerPlatform === 'darwin') {
+    try {
+      const status = await window.shortcutApi.getPermissionStatus()
+      accessibilityGranted = status.accessibility === 'granted'
+    } catch {
+      // Keep the previous value; do not show a false alarm on a probe failure.
+    }
+  }
+  renderPermissionBanner()
+  // A grant change flips whether the scan hint is allowed to show; the hint lives
+  // in #content, which this focus/launch path does not otherwise re-render. Re-run
+  // it only on an actual change (and only with a result on screen) so a stale hint
+  // clears on revoke — and a now-appropriate one appears on grant — without
+  // churning #content (and resetting scroll) on every ordinary focus.
+  if (accessibilityGranted !== prevGranted && lastResult) renderResult()
 }
 
 function emptyFilterMessage(query: string): string {
@@ -1016,6 +1057,52 @@ function stopScanningHeartbeat(): void {
   scanningHeartbeatTimer = undefined
 }
 
+/** Whether the scan hint was dismissed for the current launch only. In-memory,
+ * never persisted — so it returns on the next launch, matching the accessibility
+ * banner. Not reset by scans or filtering within a launch. */
+let scanHintDismissed = false
+
+const SCAN_HINT_MARKUP =
+  '<div class="scan-hint">' +
+  '<i data-lucide="info" aria-hidden="true"></i>' +
+  '<p class="scan-hint-text">Focus the app you want to check, then rescan.</p>' +
+  '<button class="scan-hint-dismiss" id="scan-hint-dismiss" type="button" aria-label="dismiss"><i data-lucide="x" aria-hidden="true"></i></button>' +
+  '</div>'
+
+/**
+ * Inline hint shown after a frontmost-only scan that resolved no app to read —
+ * e.g. right after launch when What Can't I Press itself was frontmost and no
+ * prior app had been captured. On macOS it shows only when Accessibility is
+ * actually granted (the live grant, shared with the permission banner) so the two
+ * never collide: when access is missing the banner owns the message, and its
+ * "rescan" advice would be misleading while the grant — not focus — is the blocker.
+ * Off macOS accessibility is not required, so that gate is skipped. Not shown for a
+ * scan-all sweep. Dismissible for the current launch via #scan-hint-dismiss.
+ */
+function scanHintHtml(): string {
+  if (scanHintDismissed) return ''
+  if (!lastResult || lastScanAll) return ''
+  if (readerPlatform === 'darwin' && accessibilityGranted !== true) return ''
+  if (lastResult.frontmostAppName != null) return ''
+  return SCAN_HINT_MARKUP
+}
+
+/**
+ * Wires the scan hint's dismiss button, present only on the passes where the hint
+ * renders. Dismissal lasts the current launch — held in scanHintDismissed, never
+ * persisted — so the hint returns on the next launch (matching the accessibility
+ * banner). Focus moves to the scan button, mirroring the banner's dismiss.
+ */
+function wireScanHintDismiss(): void {
+  const dismiss = document.getElementById('scan-hint-dismiss') as HTMLButtonElement | null
+  if (!dismiss) return
+  dismiss.addEventListener('click', () => {
+    scanHintDismissed = true
+    content.querySelector('.scan-hint')?.remove()
+    scanButton.focus()
+  })
+}
+
 function renderResult(): void {
   chordBar.hidden = false
   hideTip()
@@ -1050,9 +1137,10 @@ function renderResult(): void {
   content.classList.toggle('is-empty', preScan)
   content.innerHTML = preScan
     ? `${CONTENT_HEADING}${sections}<div class="scan-note"><i data-lucide="info" aria-hidden="true"></i><p class="scan-note-text">What Can't I Press cannot detect all possible keyboard shortcuts. Be sure to also check manually.</p></div>`
-    : `${CONTENT_HEADING}${sections}${gapsHtml}`
+    : `${CONTENT_HEADING}${scanHintHtml()}${sections}${gapsHtml}`
   renderIcons(content)
   wireSectionJumps(content)
+  wireScanHintDismiss()
 }
 
 /**
@@ -1217,6 +1305,14 @@ async function runScan(scanAllApps: boolean): Promise<void> {
   startScanningHeartbeat()
   try {
     lastResult = await window.shortcutApi.scan({ scanAllApps })
+    lastScanAll = scanAllApps
+    // The scan result carries the authoritative permission state; sync the banner
+    // from it so granting access then scanning hides the banner (and a denial
+    // reveals it) without waiting for a focus event.
+    if (readerPlatform === 'darwin') {
+      accessibilityGranted = lastResult.permission.accessibility === 'granted'
+      renderPermissionBanner()
+    }
     if (seededReaderCollapse) {
       for (const name of READER_APP_NAMES) collapsedSegments.delete(`screen-reader:${name}`)
       seededReaderCollapse = false
@@ -1616,8 +1712,13 @@ content.addEventListener('click', (event) => {
 })
 
 // Focus the primary action on load and each time the popover regains focus,
-// so opening the menu-bar window always lands on "Scan last focused app".
-window.addEventListener('focus', () => scanButton.focus())
+// so opening the menu-bar window always lands on "Scan last focused app". Also
+// re-probe Accessibility so the banner reflects a grant made in System Settings
+// while the popover was hidden.
+window.addEventListener('focus', () => {
+  scanButton.focus()
+  void refreshAccessibilityBanner()
+})
 scanButton.focus()
 
 // Always show the screen-reader sections, even before a scan. Seed them
@@ -1634,6 +1735,7 @@ async function initReaderSections(): Promise<void> {
     readerShortcuts = []
   }
   renderPermissionBanner()
+  void refreshAccessibilityBanner()
   if (!lastResult) renderResult()
 }
 void initReaderSections()
