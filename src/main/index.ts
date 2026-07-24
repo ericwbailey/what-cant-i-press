@@ -1,4 +1,6 @@
 import { app, Menu, Tray, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
+import { existsSync, renameSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
 import { IPC, type MenuCommand } from '@shared/ipc'
 import { createTrayIcon } from './icon'
 import {
@@ -143,6 +145,27 @@ function showTrayMenu(): void {
   ]
   tray.popUpContextMenu(Menu.buildFromTemplate(template))
 }
+
+// Store all persisted state under the bundle identifier so third-party
+// uninstallers, which match an app's associated files by its bundle id, remove
+// that state cleanly. Electron's default userData folder is named after
+// package.json `name` (`what-cant-i-press`), which matches neither the bundle id
+// nor the product name and is otherwise left behind on uninstall. Must run
+// before any userData access; logging is deferred until after `whenReady`.
+function consolidateUserDataUnderBundleId(): void {
+  const target = join(app.getPath('appData'), 'com.ericwbailey.whatcantipress')
+  const legacy = join(app.getPath('appData'), 'what-cant-i-press')
+  if (existsSync(legacy)) {
+    try {
+      if (existsSync(target)) rmSync(legacy, { recursive: true, force: true })
+      else renameSync(legacy, target)
+    } catch {
+      // Best-effort migration: fall back to the bundle-id path regardless.
+    }
+  }
+  app.setPath('userData', target)
+}
+consolidateUserDataUnderBundleId()
 
 // Single-instance guard: reopening the app from Applications/Finder while it is
 // already running in the menu bar must surface the existing window instead of
