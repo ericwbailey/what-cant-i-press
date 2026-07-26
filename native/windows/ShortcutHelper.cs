@@ -19,6 +19,11 @@ internal static class Program
     private const int SW_RESTORE = 9;
     private const int MaxMenuItems = 2000;
 
+    // Best-effort menu expansion (Pass 2 of ReadMenu) opens each top-level menu
+    // in turn; cap the total time so a slow or unresponsive app cannot hang the
+    // reader. Pass 1's statically-readable accelerators are already collected.
+    private static readonly TimeSpan MenuBudget = TimeSpan.FromSeconds(6);
+
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
 
@@ -73,6 +78,30 @@ internal static class Program
     private static int ParsePid(string[] args)
         => args.Length > 1 && int.TryParse(args[1], out var pid) ? pid : 0;
 
+    /// <summary>
+    /// Resolves a stable, human-friendly app name (e.g. "Notepad") from the
+    /// executable's version info, falling back to the process name. Preferred
+    /// over the window title, which changes with the open document and does not
+    /// match curated app identities. Mirrors the macOS helper's app name.
+    /// </summary>
+    private static string FriendlyName(Process process)
+    {
+        try
+        {
+            var description = process.MainModule?.FileVersionInfo.FileDescription;
+            if (!string.IsNullOrWhiteSpace(description))
+            {
+                return description!.Trim();
+            }
+        }
+        catch
+        {
+            // MainModule is inaccessible for elevated / other-user processes.
+        }
+
+        return process.ProcessName;
+    }
+
     private static void Emit(object value)
         => Console.WriteLine(JsonSerializer.Serialize(value));
 
@@ -94,7 +123,7 @@ internal static class Program
                     continue;
                 }
 
-                apps.Add(new { id = process.ProcessName, name = title, pid = process.Id });
+                apps.Add(new { id = process.ProcessName, name = FriendlyName(process), pid = process.Id });
             }
             catch
             {
@@ -122,11 +151,10 @@ internal static class Program
         try
         {
             var process = Process.GetProcessById((int)pid);
-            var title = process.MainWindowTitle;
             return new
             {
                 id = process.ProcessName,
-                name = string.IsNullOrWhiteSpace(title) ? process.ProcessName : title,
+                name = FriendlyName(process),
                 pid = (int)pid
             };
         }
@@ -168,61 +196,185 @@ internal static class Program
             return result;
         }
 
-        var cache = new CacheRequest();
-        cache.Add(AutomationElement.NameProperty);
-        cache.Add(AutomationElement.AcceleratorKeyProperty);
+        var seen = new HashSet<string>();
+        var stopwatch = Stopwatch.StartNew();
+        var menuItemCondition = new PropertyCondition(
+            AutomationElement.ControlTypeProperty, ControlType.MenuItem);
+
+        // Whether there is still room and time to keep reading.
+        bool WithinBudget() => result.Count < MaxMenuItems && stopwatch.Elapsed <= MenuBudget;
+
+        void Add(string? title, string? accelerator)
+        {
+            if (string.IsNullOrWhiteSpace(accelerator))
+            {
+                return;
+            }
+
+            var label = title ?? string.Empty;
+            if (seen.Add(label + "\u0000" + accelerator))
+            {
+                result.Add(new { title = label, accelerator });
+            }
+        }
+
+        // Reads every menu item under an element that already carries an
+        // accelerator. Used for both the static pass and each expanded dropdown.
+        void ReadItemsUnder(AutomationElement root)
+        {
+            AutomationElementCollection items;
+            try
+            {
+                items = root.FindAll(TreeScope.Descendants, menuItemCondition);
+            }
+            catch
+            {
+                return;
+            }
+
+            foreach (AutomationElement item in items)
+            {
+                if (!WithinBudget())
+                {
+                    return;
+                }
+
+                try
+                {
+                    Add(
+                        item.GetCurrentPropertyValue(AutomationElement.NameProperty) as string,
+                        item.GetCurrentPropertyValue(AutomationElement.AcceleratorKeyProperty) as string);
+                }
+                catch
+                {
+                    // Element went stale as its menu closed; skip it.
+                }
+            }
+        }
 
         // Menu bars are far cheaper to scan than an entire window subtree.
-        var roots = new List<AutomationElement>();
+        var bars = new List<AutomationElement>();
         var menuBars = window.FindAll(
             TreeScope.Descendants,
             new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.MenuBar));
         foreach (AutomationElement bar in menuBars)
         {
-            roots.Add(bar);
+            bars.Add(bar);
         }
 
-        if (roots.Count == 0)
+        if (bars.Count == 0)
         {
-            roots.Add(window);
+            bars.Add(window);
         }
 
-        var seen = new HashSet<string>();
-        var menuItemCondition = new PropertyCondition(
-            AutomationElement.ControlTypeProperty, ControlType.MenuItem);
-
-        foreach (var root in roots)
+        // Pass 1 (cheap, non-disruptive): collect accelerators already present in
+        // the tree. Covers apps that expose them statically (e.g. WinForms/WPF
+        // menus). Classic Win32 menus expose only top-level names here.
+        foreach (var bar in bars)
         {
-            AutomationElementCollection items;
-            using (cache.Activate())
+            ReadItemsUnder(bar);
+            if (!WithinBudget())
             {
-                items = root.FindAll(TreeScope.Descendants, menuItemCondition);
+                return result;
+            }
+        }
+
+        // Pass 2 (best-effort, disruptive): classic Win32 dropdown items are
+        // absent from the UI Automation tree until their menu is opened. Expand
+        // each top-level menu-bar item so its items materialize, read them, then
+        // collapse. Guarded so any failure degrades to Pass 1's result.
+        foreach (var bar in bars)
+        {
+            AutomationElementCollection tops;
+            try
+            {
+                tops = bar.FindAll(TreeScope.Children, menuItemCondition);
+            }
+            catch
+            {
+                continue;
             }
 
-            foreach (AutomationElement item in items)
+            foreach (AutomationElement top in tops)
             {
-                if (result.Count >= MaxMenuItems)
+                if (!WithinBudget())
                 {
                     return result;
                 }
 
-                var accelerator = item.GetCachedPropertyValue(
-                    AutomationElement.AcceleratorKeyProperty) as string;
-                if (string.IsNullOrWhiteSpace(accelerator))
-                {
-                    continue;
-                }
-
-                var title = item.GetCachedPropertyValue(
-                    AutomationElement.NameProperty) as string ?? string.Empty;
-
-                if (seen.Add(title + "\u0000" + accelerator))
-                {
-                    result.Add(new { title, accelerator });
-                }
+                ExpandAndReadDropdown(top, ReadItemsUnder);
             }
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Expands a top-level menu item via <see cref="ExpandCollapsePattern"/> so
+    /// its (lazily created) dropdown items appear, reads their accelerators, then
+    /// collapses it. Win32 dropdowns open as a separate popup menu parented to the
+    /// desktop root rather than under the menu item, so both locations are read.
+    /// No-op for items without the pattern (e.g. leaf items, modern apps).
+    /// </summary>
+    private static void ExpandAndReadDropdown(
+        AutomationElement top,
+        Action<AutomationElement> readItemsUnder)
+    {
+        ExpandCollapsePattern? pattern = null;
+        try
+        {
+            if (top.TryGetCurrentPattern(ExpandCollapsePattern.Pattern, out var raw))
+            {
+                pattern = (ExpandCollapsePattern)raw;
+            }
+        }
+        catch
+        {
+            pattern = null;
+        }
+
+        if (pattern is null)
+        {
+            return;
+        }
+
+        try
+        {
+            pattern.Expand();
+        }
+        catch
+        {
+            return;
+        }
+
+        try
+        {
+            // Give the dropdown a moment to render its items.
+            Thread.Sleep(60);
+            readItemsUnder(top);
+
+            var popup = AutomationElement.RootElement.FindFirst(
+                TreeScope.Children,
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Menu));
+            if (popup is not null)
+            {
+                readItemsUnder(popup);
+            }
+        }
+        catch
+        {
+            // Reading a transient popup can race its teardown; ignore.
+        }
+        finally
+        {
+            try
+            {
+                pattern.Collapse();
+            }
+            catch
+            {
+                // Leave nothing open if collapse fails; best-effort.
+            }
+        }
     }
 }
