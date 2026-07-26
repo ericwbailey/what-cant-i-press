@@ -39,17 +39,17 @@ jobs:
       HAS_MAC_CERT: ${{ secrets.MAC_SELFSIGN_P12_BASE64 != '' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
 
       - name: Set up .NET SDK (Windows helper)
         if: matrix.platform == 'win'
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 8.0.x
 
@@ -123,7 +123,7 @@ jobs:
 
       - name: Upload macOS installers
         if: matrix.platform == 'mac'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: installers-mac
           path: |
@@ -135,7 +135,7 @@ jobs:
 
       - name: Upload Windows installers
         if: matrix.platform == 'win'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: installers-win
           path: |
@@ -154,7 +154,7 @@ jobs:
       contents: write
     steps:
       - name: Download all installers
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: dist
           pattern: installers-*

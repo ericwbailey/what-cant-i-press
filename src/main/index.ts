@@ -1,8 +1,9 @@
-import { app, Menu, Tray, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
+import { app, Menu, nativeTheme, Tray, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
 import { existsSync, renameSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { IPC, type MenuCommand } from '@shared/ipc'
-import { createTrayIcon } from './icon'
+import { createTrayIcon, createWindowsTrayIcon } from './icon'
+import { isTaskbarDark } from './theme-win'
 import {
   createAboutWindow,
   createPermissionsWindow,
@@ -44,6 +45,32 @@ function showPopover(): void {
   positionPopover(popover, tray)
   popover.show()
   popover.focus()
+  // Backstop: correct the Windows tray icon color in case a taskbar theme change
+  // did not reach us via nativeTheme 'updated' (no-op on other platforms).
+  void refreshWindowsTrayIcon()
+}
+
+// Fallback poll interval for the Windows taskbar theme, covering the case where
+// nativeTheme 'updated' does not fire for a taskbar-only mode switch.
+const TRAY_THEME_POLL_MS = 5000
+let lastTaskbarDark: boolean | null = null
+
+/**
+ * Windows only: re-reads whether the taskbar is dark and swaps the tray icon to
+ * the contrasting glyph (white on a dark taskbar, black on a light one). No-op on
+ * macOS, where the template image recolors itself, and only touches the image when
+ * the taskbar theme actually changed.
+ */
+async function refreshWindowsTrayIcon(): Promise<void> {
+  if (process.platform !== 'win32' || !tray) return
+  try {
+    const dark = await isTaskbarDark()
+    if (dark === lastTaskbarDark) return
+    lastTaskbarDark = dark
+    tray.setImage(createWindowsTrayIcon(dark))
+  } catch (err) {
+    log(`Tray icon refresh failed: ${describeError(err)}`)
+  }
 }
 
 async function togglePopover(): Promise<void> {
@@ -194,7 +221,9 @@ app.whenReady().then(async () => {
   // item that was created yet not shown (zero width / menu-bar overflow) can be
   // told apart from one that threw.
   try {
-    tray = new Tray(createTrayIcon())
+    tray = new Tray(
+      process.platform === 'win32' ? createWindowsTrayIcon(false) : createTrayIcon()
+    )
     tray.setToolTip("What Can't I Press")
     tray.on('click', (event) => {
       // Control-click on macOS is a secondary click: show the context menu, the
@@ -206,6 +235,15 @@ app.whenReady().then(async () => {
       void togglePopover()
     })
     tray.on('right-click', showTrayMenu)
+    if (process.platform === 'win32') {
+      // Windows draws the tray icon as supplied (no template recoloring), so pick
+      // the contrasting glyph now and again whenever the taskbar theme changes.
+      // The interval is a fallback for taskbar-only switches that may not emit a
+      // nativeTheme 'updated' event.
+      void refreshWindowsTrayIcon()
+      nativeTheme.on('updated', () => void refreshWindowsTrayIcon())
+      setInterval(() => void refreshWindowsTrayIcon(), TRAY_THEME_POLL_MS)
+    }
     const b = tray.getBounds()
     log(`Tray created (bounds x=${b.x} y=${b.y} w=${b.width} h=${b.height})`)
   } catch (err) {
