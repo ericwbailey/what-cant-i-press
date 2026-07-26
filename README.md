@@ -39,9 +39,12 @@ JSON can be generated for what keyboard shortcuts are currently displayed. 
 
 ## Download & install
 
-Download the latest installer from the [Releases page](https://github.com/ericwbailey/what-cant-i-press/releases/latest). Builds are currently unsigned and will need to be manually approved to run. 
+Download the latest installer from the [Releases page](https://github.com/ericwbailey/what-cant-i-press/releases/latest). 
 
 ### Permissions
+
+> [!WARNING]  
+> The app is currently not registered with Apple or Microsoft, meaning you'll need to **bypass operating system protections** to install the app. All [code used to build this app is open and reviewable](https://github.com/ericwbailey/what-cant-i-press/tree/main/src). Also [reference `SECURITY.md`](https://github.com/ericwbailey/what-cant-i-press/blob/main/SECURITY.md).
 
 #### macOS
 
@@ -102,6 +105,16 @@ Electron is more mature compared to its counterparts, and allows me to more easi
 ### Why can't it detect every keyboard shortcut an app uses?
 
 There is no central registry or technique used for declaring keyboard shortcuts. Because of this, some cannot be detected by scanning. This is due to how the keyboard shortcuts have been written in the application's code.
+
+## Why is keyboard shortcut detection less effective on Windows?
+
+The Windows version of the app scans using **Microsoft UI Automation (UIA)**, the accessibility framework built into Windows. It finds the app's menu bar and reads each menu item's `AcceleratorKeyProperty`.
+
+Unfortunately, UIA does not expose a background app's accelerators the way macOS does. "Classic" Windows 32-era menus are not present in the UIA tree until a user actually opens them. Additionally, modern apps such as Notepad, Office, and Edge don't utilize "classic" menu architecture.
+
+To accomodate this, the app runs a best-effort live pass that tries to expand top-level menus through UIA's `ExpandCollapsePattern` and read whatever it can reach.
+
+[The two most popular desktop/laptop screen readers run on Windows](https://webaim.org/projects/screenreadersurvey10/#primary). If you are mad about Microsoft's regression in discoverability for this kind of thing, consider yelling at them on issue trackers.
 
 ### How does the scanning work?
 
