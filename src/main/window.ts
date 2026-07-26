@@ -378,6 +378,20 @@ export function createPermissionsWindow(
 }
 
 /**
+ * Brings the popover back to the foreground as the active app. Used after a
+ * scan-all sweep, which activates each scanned app in turn and then restores
+ * whichever app was frontmost before the sweep — leaving What Can't I Press in the
+ * background. On macOS the app is an LSUIElement accessory (no Dock icon), so
+ * pulling it in front of the app the sweep restored needs `app.focus({ steal })`;
+ * `win.focus()` alone would not steal foreground from a regular app.
+ */
+export function activatePopover(win: BrowserWindow): void {
+  if (!win.isVisible()) win.show()
+  if (process.platform === 'darwin') app.focus({ steal: true })
+  win.focus()
+}
+
+/**
  * Reapplies the floating/always-on-top state from `pinned` and `scanning`. While
  * either is active the popover floats above other apps and does not hide on blur.
  */

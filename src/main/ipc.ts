@@ -7,7 +7,7 @@ import { runScan, type Cancellation } from './core/scan-runner'
 import { aggregate } from './core/aggregate'
 import { getScreenReaderShortcuts } from './core/screen-readers'
 import { foreground } from './core/foreground'
-import { popoverState, setScanning, setPinned } from './window'
+import { popoverState, setScanning, setPinned, activatePopover } from './window'
 
 const ALLOWED_EXTERNAL = /^(https?:|x-apple\.systempreferences:|ms-settings:)/i
 
@@ -72,7 +72,13 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
         foreground.app
       )
     } finally {
-      if (sweeping && win) setScanning(win, false)
+      // A scan-all sweep activates each scanned app and then restores the app that
+      // was frontmost before it, leaving What Can't I Press in the background;
+      // bring it back to the foreground so focus returns to the popover.
+      if (sweeping && win) {
+        setScanning(win, false)
+        activatePopover(win)
+      }
       activeCancel = null
     }
   })

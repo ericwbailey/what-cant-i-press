@@ -260,6 +260,21 @@ let seededReaderCollapse = false
 let accessibilityGranted: boolean | null = null
 /** Whether the most recent scan was a scan-all sweep (vs frontmost-only). */
 let lastScanAll = false
+/**
+ * Timestamp (ms) when the last scan finished. The window `focus` handler uses it
+ * to skip its default scan-button focus for a short grace period after a scan, so
+ * the post-scan focus set by `runScan` (the filter input, or the permission
+ * banner's Grant access) survives a scan-all sweep re-activating the app a moment
+ * later. Robust to either focus-event ordering; see `runScan`.
+ */
+let lastScanEndedAt = 0
+/**
+ * Grace window after a scan during which the window-focus handler defers to
+ * `runScan`'s post-scan focus instead of focusing the scan button. Far longer than
+ * the native focus-event latency from re-activating the app, yet far shorter than
+ * any human hide-then-reopen, so "reopen lands on the scan button" is preserved.
+ */
+const POST_SCAN_FOCUS_GRACE_MS = 1000
 
 function escapeHtml(value: string): string {
   return value
@@ -882,6 +897,9 @@ function renderAppSection(
 
 /** Whether the accessibility banner was dismissed for the current launch only. */
 let bannerDismissedThisLaunch = false
+/** Shown-state currently reflected in the banner DOM, so a redundant re-render can
+ *  be skipped. `null` until the first render. */
+let renderedBannerShown: boolean | null = null
 
 /**
  * Accessibility banner. Driven by the live Accessibility grant: shown on macOS
@@ -890,13 +908,17 @@ let bannerDismissedThisLaunch = false
  * install (and whenever access is later revoked) and never lingers once access is
  * granted. Dismissal lasts only for the current launch — held in memory, never
  * persisted — so the banner reappears next launch if access is still missing (and
- * so a stale "dismissed" flag can no longer survive an uninstall/reinstall). It is
- * re-rendered only on discrete events (launch, window focus, after a scan), never
- * on filter keystrokes, so it does not flicker as results re-render.
+ * so a stale "dismissed" flag can no longer survive an uninstall/reinstall).
+ *
+ * The DOM is rebuilt only when the shown state actually changes, so a redundant
+ * re-render (this runs on every window focus, via refreshAccessibilityBanner) does
+ * not flicker the banner or discard focus on its Grant access button.
  */
 function renderPermissionBanner(): void {
   const show =
     readerPlatform === 'darwin' && accessibilityGranted === false && !bannerDismissedThisLaunch
+  if (show === renderedBannerShown) return
+  renderedBannerShown = show
   if (!show) {
     bannerEl.innerHTML = ''
     return
@@ -931,6 +953,7 @@ function renderPermissionBanner(): void {
   const dismiss = document.getElementById('banner-dismiss') as HTMLButtonElement
   dismiss.addEventListener('click', () => {
     bannerDismissedThisLaunch = true
+    renderedBannerShown = false
     bannerEl.innerHTML = ''
     scanButton.focus()
   })
@@ -1329,7 +1352,23 @@ async function runScan(scanAllApps: boolean): Promise<void> {
     } else {
       statusEl.textContent = ''
     }
+    // Return focus to the app now that results are shown: the filter input, or the
+    // permission banner's Grant access when access is missing. Record the time so
+    // the window `focus` handler defers to this if a scan-all sweep re-activates
+    // the app a moment later (main brings the popover back to the foreground).
+    lastScanEndedAt = Date.now()
+    focusAfterScan()
   }
+}
+
+/**
+ * Moves focus to where the user's next action is after a scan: the permission
+ * banner's Grant access button when access is missing (the banner, hence `#grant`,
+ * is present), otherwise the filter input.
+ */
+function focusAfterScan(): void {
+  const grant = document.getElementById('grant') as HTMLButtonElement | null
+  ;(grant ?? searchInput).focus()
 }
 
 window.shortcutApi.onScanProgress((progress) => {
@@ -1716,7 +1755,12 @@ content.addEventListener('click', (event) => {
 // re-probe Accessibility so the banner reflects a grant made in System Settings
 // while the popover was hidden.
 window.addEventListener('focus', () => {
-  scanButton.focus()
+  // A scan-all sweep hands the OS foreground to each scanned app and back, then
+  // main re-activates the popover — firing this focus event a moment after the
+  // scan finished. Within the grace window keep the post-scan focus set by
+  // `runScan` (filter input / Grant access) instead of pulling focus to the scan
+  // button; outside it, opening/reopening the popover lands on the scan button.
+  if (Date.now() - lastScanEndedAt > POST_SCAN_FOCUS_GRACE_MS) scanButton.focus()
   void refreshAccessibilityBanner()
 })
 scanButton.focus()
