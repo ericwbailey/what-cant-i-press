@@ -15,12 +15,12 @@ For example, <kbd>h</kbd> is often used to toggle open help dialogs. <kbd>h</
 
 ### Opening the app
 
-What Can’t I Press lives in your menu bar (macOS) or system tray (Windows)—not the Dock or taskbar. Click its icon to open the popover. It also opens automatically the first time you launch it so you can find it.
+What Can’t I Press lives in your macOS menu bar or Windows system tray. Click its icon to open the app. It also displays itself automatically the first time you launch it.
 
 ### Scan to discover shortcuts
 
-- Detect shortcuts in the app you had open prior to opening What Can’t I Press, or
-- Scan all currently open apps (takes longer).
+- Detect shortcuts in the app you had open prior to opening What Can’t I Press?, or
+- Scan all currently open apps.
 
 ### Search and filter
 
@@ -78,13 +78,13 @@ There is no telemetry or analytics. Its only network activity is checking GitHub
 
 ### Why did you make this?
 
-Manually discovering conflicts is a chore, yet is important work to do to ensure you don't unintentionally override something important. This helps to lower the burden of the act of discovery. 
+Manually discovering conflicts is a chore, yet is important work to do to ensure you don't unintentionally override something important. This app helps to lower the burden of the act of discovery. 
 
 For more background on this, read [_How an accessibility designer adds keyboard shortcuts to a web app_](https://ericwbailey.website/published/how-an-accessibility-designer-adds-keyboard-shortcuts-to-a-web-app/).
 
 ### What about screen reader passthrough keys?
 
-We shouldn't put the burden on the person using assistive technology to use workarounds as much as possible.
+As much as possible we should not put the burden on the person using assistive technology to use workarounds.
 
 ### How do I suggest a feature?
 
@@ -100,11 +100,11 @@ We shouldn't put the burden on the person using assistive technology to use work
 
 ### Why did you use Electron to make this?
 
-Electron is more mature compared to its counterparts, and allows me to more easily distribute the app across different operating systems.
+Electron allows me to more easily distribute the app across different operating systems, and is also more mature compared to its peers in the space.
 
-### Why can't it detect every keyboard shortcut an app uses?
+### Why can't the app detect every keyboard shortcut an app uses?
 
-There is no central registry or technique used for declaring keyboard shortcuts. Because of this, some cannot be detected by scanning. This is due to how the keyboard shortcuts have been written in the application's code.
+There is no central registry or technique used for declaring keyboard shortcuts. Because of this, some keyboard shortcuts cannot be detected by scanning. This is due to how the keyboard shortcuts have been written in the application's code.
 
 ## Why is keyboard shortcut detection less effective on Windows?
 
