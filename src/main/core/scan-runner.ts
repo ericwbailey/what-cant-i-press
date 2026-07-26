@@ -2,7 +2,7 @@ import type { ScanOptions, ScanProgress, ScanResult, CoverageGap } from '@shared
 import type { RawShortcut } from '@shared/shortcuts'
 import type { PlatformProvider, RunningApp } from '../providers/types'
 import { aggregate } from './aggregate'
-import { getCuratedShortcuts } from './curated'
+import { getCuratedShortcuts, getCuratedMenuShortcuts } from './curated'
 import { getScreenReaderShortcuts, isScreenReaderApp } from './screen-readers'
 
 /** Simple cooperative cancellation token flipped by the cancel IPC. */
@@ -69,12 +69,16 @@ async function scanFrontmostOnly(
   }
 
   onProgress({ phase: 'apps', current: 1, total: 1, appName: frontmost.name })
+  // Curated in-app defaults are included whether or not the live read yields
+  // anything, so platforms whose menus cannot be read live (Windows) still show
+  // the focused app's shortcuts. A live-detected duplicate supersedes them.
+  const curated = getCuratedMenuShortcuts(frontmost, provider.platform)
   try {
     const raws = await provider.readAppMenuShortcuts(frontmost)
     const gaps = await provider.readCoverageGaps(frontmost)
-    return { raws, appsScanned: 1, gaps, targetName: frontmost.name }
+    return { raws: [...raws, ...curated], appsScanned: 1, gaps, targetName: frontmost.name }
   } catch {
-    return { raws: [], appsScanned: 0, gaps: [], targetName: frontmost.name }
+    return { raws: curated, appsScanned: 1, gaps: [], targetName: frontmost.name }
   }
 }
 
@@ -106,6 +110,10 @@ async function scanAllApps(
       const app = targets[i]
       onProgress({ phase: 'apps', current: i + 1, total, appName: app.name })
 
+      // Curated in-app defaults are added regardless of the live read, so apps
+      // whose menus cannot be enumerated live (Windows) still contribute. A
+      // live-detected duplicate supersedes them during aggregation.
+      raws.push(...getCuratedMenuShortcuts(app, provider.platform))
       try {
         await provider.activateApp(app)
         await delay(ACTIVATION_SETTLE_MS)

@@ -1,10 +1,12 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { app } from 'electron'
 import type { Platform, RawShortcut } from '@shared/shortcuts'
 import type { CoverageGap, PermissionStatus } from '@shared/scan'
 import type { PlatformProvider, RunningApp } from '../types'
+import { log, describeError } from '../../core/logger'
 import { parseAcceleratorString } from './accelerators'
 import { windowsOsShortcuts } from './os-shortcuts'
 
@@ -31,14 +33,22 @@ function helperPath(): string {
 
 /** Invokes the .NET UI Automation helper and parses its JSON output. */
 async function runHelper<T>(args: string[]): Promise<T | null> {
+  const bin = helperPath()
+  // Distinguish a missing binary (packaging/build problem) from a runtime
+  // failure or empty result, which otherwise look identical to the renderer.
+  if (!existsSync(bin)) {
+    log(`windows helper missing at ${bin}`)
+    return null
+  }
   try {
-    const { stdout } = await execFileAsync(helperPath(), args, {
+    const { stdout } = await execFileAsync(bin, args, {
       timeout: 12000,
       maxBuffer: 16 * 1024 * 1024,
       windowsHide: true
     })
     return JSON.parse(stdout) as T
-  } catch {
+  } catch (err) {
+    log(`windows helper failed (${args.join(' ')}): ${describeError(err)}`)
     return null
   }
 }

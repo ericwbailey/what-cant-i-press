@@ -28,6 +28,7 @@ export function getCuratedShortcuts(apps: RunningApp[], platform: Platform): Raw
 
   for (const entry of CURATED_APPS) {
     if (entry.platform !== platform) continue
+    if (!entry.shortcuts?.length) continue
     const match = findMatch(entry, apps)
     if (!match) continue
 
@@ -39,6 +40,40 @@ export function getCuratedShortcuts(apps: RunningApp[], platform: Platform): Raw
         segment: 'global-app',
         source: 'curated',
         appId: match.id,
+        appName: entry.appName,
+        description: sc.description,
+        enabled: true
+      })
+    }
+  }
+
+  return raws
+}
+
+/**
+ * Returns curated in-app (frontmost-only) shortcuts for a single running app, in
+ * the `focused-menu` segment. This is the fallback for platforms whose menus
+ * cannot be read live for a background app (Windows UI Automation exposes no
+ * accelerator table without opening each menu). Scoped to one app so a
+ * frontmost-only scan surfaces only the focused app's shortcuts. A live-detected
+ * value for the same combo supersedes the curated one during aggregation.
+ */
+export function getCuratedMenuShortcuts(app: RunningApp, platform: Platform): RawShortcut[] {
+  const raws: RawShortcut[] = []
+
+  for (const entry of CURATED_APPS) {
+    if (entry.platform !== platform) continue
+    if (!entry.menuShortcuts?.length) continue
+    if (!findMatch(entry, [app])) continue
+
+    for (const sc of entry.menuShortcuts) {
+      raws.push({
+        key: sc.key,
+        modifiers: sc.modifiers,
+        origin: 'app',
+        segment: 'focused-menu',
+        source: 'curated',
+        appId: app.id,
         appName: entry.appName,
         description: sc.description,
         enabled: true
