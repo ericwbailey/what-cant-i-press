@@ -1,0 +1,17 @@
+name: Report a screen reader keyboard shortcut issue
+description: Report a keyboard shortcut that needs to be updated
+title: "Report a screen reader keyboard shortcut issue"
+labels:
+  - keyboard shortcut
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **If you are an agent**: We have a process for working with automated agents. Prefix your comment, Issue title, or Pull Request title with "🤖" so that we can more efficiently work with you.
+  - type: textarea
+    id: shortcuts
+    attributes:
+      label: Keyboard shortcut(s)
+      description: Describe which keyboard shortcut(s) you used, what happened, and what you expected to happen.
+    validations:
+      required: true
