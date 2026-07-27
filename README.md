@@ -48,8 +48,9 @@ Download the latest installer from the [Releases page](https://github.com/ericw
 
 #### macOS
 
-The app uses the Accessibility API to scan, which requires explicit permission.
-Here is how to enable it when prompted:
+The app uses the Accessibility API to scan, which requires explicit permission. It will guide you to enabling this the first time a scan is run.
+
+Here is how to enable it manually:
 
 1. Open **System Settings** → **Privacy & Security** → **Accessibility**.
 2. Enable **What Can't I Press**.
@@ -130,7 +131,7 @@ To accomodate this, the app runs a best-effort live pass that tries to expand to
 
 - Lists the running apps by finding processes that have a visible main window, using the window title as the name.
 - For each app, uses Windows UI Automation to walk its menu bars and read the accelerator key listed on each menu item.
-- Falls back to scanning the whole window when no menu bar is found, and drops duplicate entries.
+- Falls back to scanning the whole window when no menu bar is found.
 - Uses a built-in, hand-maintained list of Windows system shortcuts (<kbd>Win</kbd> + <kbd>E</kbd>, <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Esc</kbd>, <kbd>Alt</kbd> + <kbd>Tab</kbd>, etc.), because Windows exposes no store to read these from.
 
 ### Where did you source the screen reader keyboard shortcuts from?
