@@ -1,0 +1,21 @@
+{
+  "name": "What Can't I Press",
+  "short_name": "Can't Press",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#1d1d1f",
+  "description": "Keyboard commands reserved by JAWS, NVDA, Narrator, and VoiceOver.",
+  "icons": [
+    {
+      "src": "images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

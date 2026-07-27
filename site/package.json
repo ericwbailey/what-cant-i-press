@@ -1,0 +1,19 @@
+{
+  "name": "what-cant-i-press",
+  "description": "Keyboard commands reserved by JAWS, NVDA, Narrator, and VoiceOver.",
+  "version": "1.4.0",
+  "license": "PolyForm Noncommercial License 1.0.0",
+  "author": "Eric Bailey <eric.w.bailey@gmail.com>",
+  "keywords": [ "electron", "jaws", "keyboard", "keyboard-shortcuts", "macos", "narrator", "nvda", "voiceover" ],
+    "scripts": {
+    "start": "python3 -m http.server 8000"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ericwbailey/what-cant-i-press"
+  },
+  "bugs": {
+    "url": "https://github.com/ericwbailey/what-cant-i-press/issues/new?template=bug_report.yml"
+  },
+  "homepage": "https://what-cant-i-press.app/"
+}

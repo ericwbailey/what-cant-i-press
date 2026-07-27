@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, viewport-fit=cover", initial-scale=1.0, interactive-widget=resizes-content">
+    <title>What Can't I Press?</title>
+    <link rel="stylesheet" href="./site.css" as="style" />
+    <link rel="manifest" href="/manifest.json">
+
+    <meta name="text-scale" content="scale">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="What Can't I Press?">
+    <meta name="application-name" content="What Can't I Press?">
+    <meta name="description" content="Keyboard commands reserved by JAWS, NVDA, Narrator, and VoiceOver.">
+    <meta name="subject" content="Keyboard commands reserved by JAWS, NVDA, Narrator, and VoiceOver.">
+
+    <link rel="icon" sizes="192x192" href="/favicon.ico">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+    <meta property="twitter:title" content="What Can't I Press?">
+    <meta property="twitter:description" content="Keyboard commands reserved by JAWS, NVDA, Narrator, and VoiceOver.">
+    <meta property="twitter:image" content="/social-media-preview.png">
+    <meta property="twitter:site" content="https://what-cant-i-press.app">
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="og:title" content="What Can't I Press?">
+    <meta property="og:site_name" content="What Can't I Press?">
+    <meta property="og:description" content="Keyboard commands reserved by JAWS, NVDA, Narrator, and VoiceOver.">
+    <meta property="og:image" content="/social-media-preview.png">
+    <meta property="og:url" content="https://what-cant-i-press.app">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:type" content="website">
+  </head>
+  <body>
+    <header class="page-head">
+      <div class="page-head-lockup">
+        <div class="page-head-info">
+          <h1>What Can't I Press?</h1>
+          <p class="lede">Keyboard commands reserved by JAWS, NVDA, Narrator, and VoiceOver. Hold <kbd class="kbd-secondary">Control</kbd> or <kbd class="kbd-secondary">Shift</kbd> to modify what is copied to the clipboard.</p>
+        </div>
+        <div class="page-head-download">
+          <a class="download" href="https://github.com/ericwbailey/what-cant-i-press/releases">
+            <svg aria-hidden="true" class="download-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
+            Download the app
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="filters">
+        <div class="field">
+          <label for="search">Filter by text</label>
+          <div class="input-wrap">
+            <input
+              id="search"
+              class="input-filter"
+              type="text"
+              autocomplete="off"
+              spellcheck="false"
+              aria-describedby="filter-hint"
+            />
+            <button id="search-clear" class="input-clear" type="button" hidden>
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              <span class="hide-visually">Clear filter by text</span>
+            </button>
+          </div>
+          <div class="input-hint" id="filter-hint">Filter by combo, app, or action.</div>
+        </div>
+
+        <div class="field">
+          <label for="chord">Filter by shortcut</label>
+          <div class="input-wrap">
+            <input
+              id="chord"
+              class="input-chord"
+              type="text"
+              readonly
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Press a shortcut to filter"
+              aria-describedby="chord-hint"
+            />
+            <button id="chord-clear" class="input-clear" type="button" hidden>
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              <span class="hide-visually">Clear filter by shortcut</span>
+            </button>
+          </div>
+          <div class="input-hint" id="chord-hint">Press <kbd class="kbd-secondary">Escape</kbd> twice to move focus out of this input.</div>
+        </div>
+      </div>
+      <p id="count" class="results-status"></p>
+      <p id="copied" class="copied"></p>
+
+      <div id="results"></div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <img class="icon" src="icon.png" alt="App icon. An active gas stove burner as seen from the top.">
+      <ul class="secondary-content">
+        <li><a href="https://github.com/ericwbailey/what-cant-i-press/tree/main/src">Source code</a></li>
+        <li><a href="https://github.com/ericwbailey/what-cant-i-press/releases">Releases</a></li>
+        <li><a href="https://github.com/ericwbailey/what-cant-i-press/blob/main/ROADMAP.md">Roadmap</a></li>
+        <li><a href="https://github.com/ericwbailey/what-cant-i-press/blob/main/LICENSE.md">License</a></li>
+      </ul>
+      <p class="copyright">Eric Bailey &copy; <script type="text/javascript">document.write(new Date().getFullYear());</script></p>
+    </footer>
+
+    <script src="./app.bundle.js"></script>
+  </body>
+</html>
