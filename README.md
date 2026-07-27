@@ -95,6 +95,10 @@ As much as possible we should not put the burden on the person using assistive t
 
 [File an Issue that describes the bug](https://github.com/ericwbailey/what-cant-i-press/issues/new?template=bug_report.yml).
 
+### How do I report a misidentified keyboard shortcut?
+
+[File an Issue that describes the keyboard shortcut that didn't work as expected](https://github.com/ericwbailey/what-cant-i-press/issues/new?template=keyboard_shortcut_issue.yml).
+
 ### How do I report an accessibility issue?
 
 [File an Issue that describes the access barrier](https://github.com/ericwbailey/what-cant-i-press/issues/new?template=accessibility_issue.yml).
