@@ -44,7 +44,7 @@ Download the latest installer from the [Releases page](https://github.com/ericw
 ### Permissions
 
 > [!WARNING]  
-> The app is currently not registered with Apple or Microsoft, meaning you'll need to **bypass operating system protections** to install the app. All [code used to build this app is open and reviewable](https://github.com/ericwbailey/what-cant-i-press/tree/main/src). Also [reference `SECURITY.md`](https://github.com/ericwbailey/what-cant-i-press/blob/main/SECURITY.md).
+> The app is currently not registered with Apple or Microsoft, meaning you'll need to **bypass operating system protections** to install and run the app. All [code used to build this app is open and reviewable](https://github.com/ericwbailey/what-cant-i-press/tree/main/src). Also [reference `SECURITY.md`](https://github.com/ericwbailey/what-cant-i-press/blob/main/SECURITY.md).
 
 #### macOS
 
