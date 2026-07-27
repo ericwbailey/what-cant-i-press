@@ -223,6 +223,16 @@ header {
   border-bottom: 1px solid var(--border);
 }
 
+/* Make the frameless popover draggable by its header (native OS window drag).
+   The interactive buttons opt back out so they stay clickable. */
+#header {
+  -webkit-app-region: drag;
+}
+
+#header button {
+  -webkit-app-region: no-drag;
+}
+
 header h1 {
   font-size: 13px;
   font-weight: 600;
