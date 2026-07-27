@@ -18,6 +18,13 @@
   --color-kbd-text: hsl(0 0% 100%);
   --color-kbd-shadow: hsl(240 1.5% 39.4%);
 
+  --border-radius-tiny: 4px;
+  --border-radius-small: 6px;
+  --border-radius-medium: 8px;
+  --border-radius-large: 10px;
+  --border-radius-kbd: 5px;
+  --border-radius-circle: 999rem;
+
   --font-size-1: 0.75rem;
   --font-size-2: 0.8rem;
   --font-size-3: 0.9rem;
@@ -105,7 +112,7 @@ button {
   flex: none;
   appearance: none;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--border-radius-small);
   background: var(--color-fill-subtle);
   color: var(--color-text-dim);
   font: inherit;
@@ -126,7 +133,7 @@ input[type='text'] {
   appearance: none;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--border-radius-small);
   color: var(--color-text);
   flex: 1;
   font: inherit;
@@ -177,7 +184,7 @@ input[type='text'] {
 
 .download {
   background-color: var(--color-accent);
-  border-radius: 999rem;
+  border-radius: var(--border-radius-circle);
   color: var(--color-kbd-text) !important;
   font-size: var(--font-size-4);
   line-height: 1;
@@ -195,8 +202,6 @@ input[type='text'] {
   &:active {
     filter: brightness(0.3);
     transition: none;
-    position: relative;
-    top: calc(0.5rem + 1px);
   }
 
   @media (min-width: 725px) {
@@ -261,7 +266,7 @@ input[type='text'] {
 
 .input-clear {
   position: absolute;
-  right: 6px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   display: inline-flex;
@@ -272,7 +277,7 @@ input[type='text'] {
   padding: 0;
   appearance: none;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--border-radius-tiny);
   background: transparent;
   color: var(--color-text-dim);
   cursor: pointer;
@@ -352,7 +357,7 @@ details[open] > .segment-head .caret {
   font-weight: 600;
   color: var(--color-text-dim);
   background: var(--color-fill-subtle);
-  border-radius: 10px;
+  border-radius: var(--border-radius-large);
   padding: 1px 7px;
 }
 
@@ -378,7 +383,7 @@ details[open] > .segment-head .caret {
   list-style: none;
   margin: 8px 0 7px;
   padding: 0;
-  border-radius: 8px;
+  border-radius: var(--border-radius-medium);
   overflow: hidden;
   display: grid;
   grid-template-columns: fit-content(40%) 1fr;
@@ -401,7 +406,7 @@ details[open] > .segment-head .caret {
 
   &:last-child {
     border-bottom: none;
-    border-radius: 0 0 8px 8px;
+    border-radius: 0 0 var(--border-radius-medium) var(--border-radius-medium);
     margin-bottom: 4rem;
   }
 }
@@ -431,7 +436,7 @@ kbd {
   font-weight: 400;
   color: var(--color-kbd-text);
   background: var(--color-kbd-bg);
-  border-radius: 5px;
+  border-radius: var(--border-radius-kbd);
   padding: 2px 7px;
   min-width: 24px;
   justify-self: start;

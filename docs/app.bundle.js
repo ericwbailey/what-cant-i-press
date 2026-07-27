@@ -3759,6 +3759,7 @@
   var heldKeys = /* @__PURE__ */ new Map();
   var fnHeld = false;
   var chordEscapePresses = 0;
+  var chordShiftTabPresses = 0;
   function flatten(groups) {
     return groups.flatMap(
       (group) => group.commands.map((command) => ({
@@ -4084,21 +4085,40 @@
     if (index === -1) return;
     (_b = (_a = items[index + 1]) != null ? _a : items[0]) == null ? void 0 : _b.focus();
   }
+  function focusPrevFrom(current) {
+    var _a, _b;
+    const items = focusableElements();
+    const index = items.indexOf(current);
+    if (index === -1) return;
+    (_b = (_a = items[index - 1]) != null ? _a : items[items.length - 1]) == null ? void 0 : _b.focus();
+  }
   chordInput.addEventListener(
     "keydown",
     (event) => {
       event.preventDefault();
       const isEscape = event.key === "Escape" || event.code === "Escape";
+      const isShiftTab = event.shiftKey && (event.key === "Tab" || event.code === "Tab");
       if (!event.repeat) {
         if (isEscape) {
+          chordShiftTabPresses = 0;
           chordEscapePresses += 1;
           if (chordEscapePresses >= 2) {
             chordEscapePresses = 0;
             focusNextFrom(chordInput);
             return;
           }
+        } else if (isShiftTab) {
+          chordEscapePresses = 0;
+          chordShiftTabPresses += 1;
+          if (chordShiftTabPresses >= 2) {
+            chordShiftTabPresses = 0;
+            clearChord();
+            focusPrevFrom(chordInput);
+          }
+          return;
         } else {
           chordEscapePresses = 0;
+          chordShiftTabPresses = 0;
         }
       }
       const isFn = event.code === "Fn" || event.key === "Fn";
@@ -4130,6 +4150,7 @@
     fnHeld = false;
     heldKeys.clear();
     chordEscapePresses = 0;
+    chordShiftTabPresses = 0;
     refreshChordField([]);
   });
   chordClear.addEventListener("click", () => {
