@@ -105,13 +105,21 @@ As much as possible we should not put the burden on the person using assistive t
 
 ### Why did you use Electron to make this?
 
-Electron allows me to more easily distribute the app across different operating systems, and is also more mature compared to its peers in the space.
+Electron allows me to more easily distribute the app across different operating systems. It is also more mature of a framework compared to its peers in the space.
 
 ### Why can't the app detect every keyboard shortcut an app uses?
 
 There is no central registry or technique used for declaring keyboard shortcuts. Because of this, some keyboard shortcuts cannot be detected by scanning. This is due to how the keyboard shortcuts have been written in the application's code.
 
-## Why is keyboard shortcut detection less effective on Windows?
+### Why isn't the app detecting keyboard shortcuts on macOS, even after I gave it accessibility permissions?
+
+This can happen with ad-hoc-signed builds, which is what this app uses until I get it signed. To fix it: 
+
+- Go to **System Settings** → **Privacy & Security** → **Accessibility**
+- Remove "What Can't I Press" with "–"
+- Re-add the app to the list of apps, and then and enable it.
+
+### Why is keyboard shortcut detection less effective on Windows?
 
 The Windows version of the app scans using **Microsoft UI Automation (UIA)**, the accessibility framework built into Windows. It finds the app's menu bar and reads each menu item's `AcceleratorKeyProperty`.
 
