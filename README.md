@@ -2,7 +2,7 @@
 
 <h1 align="center">What Can't I Press?</h1>
 
-<p align="center"><code>macOS</code>, <code>Windows</code> |  <a href="https://github.com/ericwbailey/what-cant-i-press/blob/main/ROADMAP.md">Roadmap</a></p>
+<p align="center"><code>macOS</code> | <code>Windows</code>
 
 [Example of app use.](https://github.com/user-attachments/assets/e829c947-c691-445c-b5b2-409be85851e4)
 
@@ -14,7 +14,10 @@ Video description
     Two open apps placed side-by-side on macOS: TextEdit and What Can't I Press? TextEdit is open to a blank document. What Can't I Press? shows a search input, an expand/collapse all toggle button, a list of 4 disclosures in a collapsed state, a notification message, a shortcut filter input, a download icon, and two buttons labeled "Scan all open apps" and "Scan last focused app". The disclosures are labeled, "JAWS", "Narrator", "NVDA", and "VoiceOver" and each has a badge tallying how many shortcuts are present. 
   </p>
   <p>
-    The mouse cursor clicks the "Scan last focused app" button and a brief scan happens. The list of disclosures updates to show global keyboard shortcuts and shortcuts for TextEdit.
+    The notification message reads, "What Can't I Press cannot detect all possible keyboard shortcuts. Be sure to also check manually."
+  </p>
+  <p>
+    The mouse cursor clicks the "Scan last focused app" button and a brief scan happens. The list of disclosures updates to show global keyboard shortcuts and shortcuts for TextEdit. All disclosures are set to an expanded state, and links to jump to the next section are also revealed.
   </p>
   <p>
     The mouse cursor then clicks on the search input, where the word "save" is entered. It then briefly scrolls through the list to show what apps have functionality related to saving. 
