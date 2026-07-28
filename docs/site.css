@@ -2,9 +2,9 @@
   --color-bg: hsl(240 11.1% 96.5%);
   --color-text: hsl(240 3.3% 11.8%);
   --color-text-dim: hsl(240 2.2% 44.1%);
-  --color-accent: hsl(211 100% 50%);
-  --color-border: hsla(0 0% 0% / 0.12);
-  --color-border-hover: hsla(0 0% 0% / 0.22);
+  --color-accent: hsl(211 100% 43.9%);
+  --color-border: hsl(240 3.1% 55.9%);
+  --color-border-hover: hsl(240 3.2% 42.9%);
   --color-row: hsla(0 0% 0% / 0.03);
 
   --color-surface: hsl(0 0% 100%);
@@ -514,6 +514,7 @@ kbd {
   gap: var(--gap-large);
   list-style-type: none;
   margin: 1.5rem 0 0 0;
+  padding: 0;
 }
 
 .secondary-content a {
