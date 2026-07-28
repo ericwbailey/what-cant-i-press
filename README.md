@@ -4,6 +4,29 @@
 
 <p align="center"><code>macOS</code>, <code>Windows</code> |  <a href="https://github.com/ericwbailey/what-cant-i-press/blob/main/ROADMAP.md">Roadmap</a></p>
 
+[Example of app use.](https://github.com/user-attachments/assets/e829c947-c691-445c-b5b2-409be85851e4)
+
+<details>
+<summary>
+Video description
+</summary>
+  <p>
+    Two open apps placed side-by-side on macOS: TextEdit and What Can't I Press? TextEdit is open to a blank document. What Can't I Press? shows a search input, an expand/collapse all toggle button, a list of 4 disclosures in a collapsed state, a notification message, a shortcut filter input, a download icon, and two buttons labeled "Scan all open apps" and "Scan last focused app". The disclosures are labeled, "JAWS", "Narrator", "NVDA", and "VoiceOver" and each has a badge tallying how many shortcuts are present. 
+  </p>
+  <p>
+    The mouse cursor clicks the "Scan last focused app" button and a brief scan happens. The list of disclosures updates to show global keyboard shortcuts and shortcuts for TextEdit.
+  </p>
+  <p>
+    The mouse cursor then clicks on the search input, where the word "save" is entered. It then briefly scrolls through the list to show what apps have functionality related to saving. 
+  </p>
+  <p>
+    The search input is cleared by clicking a clear button, then focus is placed on the filter input, where <kbd>Command</kbd>kbd> + <kbd>s</kbd> is entered. The list of keyboard shortcuts filters to show all shortcuts that incorporate these keystrokes. 
+  </p>
+  <p>
+    The cursor then clicks on the  <kbd>Command</kbd>kbd> + <kbd>S</kbd> save row button, and places focus on the TextEdit document. The content "⌘S" is inserted into the document via pasting.
+  </p>
+</details>
+
 **Helps to show what keyboard shortcuts are already claimed by different screen readers and apps**. This helps to prevent collisions when creating new keybindings. 
 
 For example, <kbd>h</kbd> is often used to toggle open help dialogs. <kbd>h</kbd> is also [the most popular navigation technique used by the two most popular screen readers on the planet](https://webaim.org/projects/screenreadersurvey10/#finding). 
