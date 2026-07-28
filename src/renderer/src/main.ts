@@ -188,7 +188,7 @@ root.innerHTML = `
     <h2 class="hide-visually">Filter by keypress</h2>
     <div class="chord-wrap">
       <input id="chord" class="chord-input" type="text" readonly placeholder="Press a shortcut to filter" aria-label="Filter by pressing a keyboard shortcut" aria-describedby="chord-hint" autocomplete="off" spellcheck="false" />
-      <div id="chord-hint" class="hide-visually" aria-hidden="true">Press escape twice to move focus out of this input.</div>
+      <div id="chord-hint" class="hide-visually" aria-hidden="true">Press Escape twice or Shift + Tab + Tab to move focus out of this input.</div>
       <span class="chord-caret" aria-hidden="true"></span>
       <button class="search-clear" id="chord-clear" type="button" hidden aria-label="Clear shortcut filter">
         <i data-lucide="x" aria-hidden="true"></i>
@@ -241,6 +241,11 @@ let activeChord: { key: string; modifiers: Modifier[] } | null = null
 // captures Tab to build chords, so it traps focus; a second Escape releases
 // focus to the next control. Reset on blur and on any non-Escape key.
 let chordEscapePresses = 0
+
+// Consecutive Shift+Tab presses while the chord field is focused. Mirrors the
+// Escape counter but releases focus to the *previous* control on the second
+// press. Reset on blur and on any key that is not Shift+Tab.
+let chordShiftTabPresses = 0
 
 // Whether the macOS Fn (Globe) key is currently held. Tracked separately because
 // Chromium exposes no `event.fnKey` flag and only inconsistently reports Fn via
@@ -1566,25 +1571,65 @@ function focusNextFrom(current: HTMLElement): void {
   ;(items[index + 1] ?? items[0])?.focus()
 }
 
+/** Moves focus to the previous focusable element before `current`, wrapping to last. */
+function focusPrevFrom(current: HTMLElement): void {
+  const items = focusableElements()
+  const index = items.indexOf(current)
+  if (index === -1) return
+  ;(items[index - 1] ?? items[items.length - 1])?.focus()
+}
+
+/**
+ * Clears the committed chord filter and empties the field: drops activeChord,
+ * resets the held/exit state, hides the clear button, and re-renders unfiltered
+ * results. Leaves focus where it is (callers move or restore focus themselves).
+ */
+function clearChordFilter(): void {
+  activeChord = null
+  fnHeld = false
+  heldKeys.clear()
+  chordEscapePresses = 0
+  chordShiftTabPresses = 0
+  chordInput.value = ''
+  syncChordClear()
+  renderResult()
+}
+
 chordInput.addEventListener(
   'keydown',
   (event) => {
     event.preventDefault()
 
-    // The field captures Tab to build chords, trapping focus. A second
-    // consecutive Escape releases focus to the next control; the first still
-    // commits an Escape (⎋) chord. Any other key resets the count.
+    // The field captures Tab to build chords, trapping focus. Two consecutive
+    // Escapes release focus to the next control; a Shift+Tab pressed twice (the
+    // second a fresh press after the first Tab's keyup) releases focus to the
+    // previous control. The first press still commits its chord (⎋ or ⇧⇥); the
+    // exit press clears it (clearChordFilter) so the field is empty on the way
+    // out. Any other key resets both counts.
     const isEscape = event.key === 'Escape' || event.code === 'Escape'
+    const isShiftTab = (event.key === 'Tab' || event.code === 'Tab') && event.shiftKey
     if (!event.repeat) {
       if (isEscape) {
+        chordShiftTabPresses = 0
         chordEscapePresses += 1
         if (chordEscapePresses >= 2) {
-          chordEscapePresses = 0
+          // Clear before moving focus: clearChordFilter hides #chord-clear and
+          // re-renders results, so the focus target is computed on the fresh DOM.
+          clearChordFilter()
           focusNextFrom(chordInput)
+          return
+        }
+      } else if (isShiftTab) {
+        chordEscapePresses = 0
+        chordShiftTabPresses += 1
+        if (chordShiftTabPresses >= 2) {
+          clearChordFilter()
+          focusPrevFrom(chordInput)
           return
         }
       } else {
         chordEscapePresses = 0
+        chordShiftTabPresses = 0
       }
     }
 
@@ -1629,16 +1674,12 @@ chordInput.addEventListener('blur', () => {
   fnHeld = false
   heldKeys.clear()
   chordEscapePresses = 0
+  chordShiftTabPresses = 0
   refreshChordField([])
 })
 
 chordClear.addEventListener('click', () => {
-  activeChord = null
-  fnHeld = false
-  heldKeys.clear()
-  chordInput.value = ''
-  syncChordClear()
-  renderResult()
+  clearChordFilter()
   chordInput.focus()
 })
 
