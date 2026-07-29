@@ -188,12 +188,12 @@ root.innerHTML = `
     <h2 class="hide-visually">Filter by keypress</h2>
     <div class="chord-wrap">
       <input id="chord" class="chord-input" type="text" readonly placeholder="Press a shortcut to filter" aria-label="Filter by pressing a keyboard shortcut" aria-describedby="chord-hint" autocomplete="off" spellcheck="false" />
-      <div id="chord-hint" class="hide-visually" aria-hidden="true">Press Escape twice or Shift + Tab + Tab to move focus out of this input.</div>
       <span class="chord-caret" aria-hidden="true"></span>
       <button class="search-clear" id="chord-clear" type="button" hidden aria-label="Clear shortcut filter">
         <i data-lucide="x" aria-hidden="true"></i>
       </button>
     </div>
+    <div id="chord-hint" class="chord-hint" aria-hidden="true">Press Escape twice or Shift + Tab + Tab to move focus out of this input.</div>
   </div>
   <footer id="footer" data-f6 tabindex="-1">
     <h2 class="hide-visually">Scan and export</h2>

@@ -500,6 +500,14 @@ html[data-input='keyboard'] .row-button:focus {
   display: none;
 }
 
+.chord-hint {
+  padding: 6px 12px;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 11px;
+  text-align: center;
+}
+
 .chord-wrap {
   position: relative;
   display: flex;
@@ -517,7 +525,7 @@ html[data-input='keyboard'] .row-button:focus {
   min-height: 44px;
   appearance: none;
   border: none;
-  background: var(--transparent);
+  background: var(--chord-fill);
   color: var(--text);
   border-radius: 0;
   padding: 0;
