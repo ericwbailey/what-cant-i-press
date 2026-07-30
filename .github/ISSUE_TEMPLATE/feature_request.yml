@@ -1,5 +1,5 @@
 name: Request a feature
-description: Features must be approved before being worked on.
+description: Features must be approved before being worked on
 title: "Request a feature"
 labels:
   - feature request
