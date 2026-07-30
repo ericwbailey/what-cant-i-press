@@ -1,5 +1,5 @@
 name: Accessibility issue
-description: Problems operating the app with assistive technology.
+description: Problems operating the app with assistive technology
 title: "Report an accessibility issue"
 labels:
   - accessibility
