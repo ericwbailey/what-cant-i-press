@@ -14,7 +14,7 @@ Want something that isn't listed? Open a [feature request](https://github.com/er
 
 ## Non-goals
 
-These are features I intentionally do not want to add.
+These are features I intentionally do not want to add:
 
 ### Linux
 
