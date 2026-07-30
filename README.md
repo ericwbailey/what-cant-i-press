@@ -26,7 +26,7 @@ Video description
     The search input is cleared by clicking a clear button, then focus is placed on the filter input, where <kbd>Command</kbd>kbd> + <kbd>s</kbd> is entered. The list of keyboard shortcuts filters to show all shortcuts that incorporate these keystrokes. 
   </p>
   <p>
-    The cursor then clicks on the  <kbd>Command</kbd>kbd> + <kbd>S</kbd> save row button, and places focus on the TextEdit document. The content "⌘S" is inserted into the document via pasting.
+    The cursor then clicks on the  <kbd>Command</kbd> + <kbd>S</kbd> save row button, and places focus on the TextEdit document. The content "⌘S" is inserted into the document via pasting.
   </p>
 </details>
 
@@ -41,7 +41,7 @@ For example, <kbd>h</kbd> is often used to toggle open help dialogs. <kbd>h</
 
 ### Opening the app
 
-What Can’t I Press lives in your macOS menu bar or Windows system tray. Click its icon to open the app. It also displays itself automatically the first time you launch it.
+What Can’t I Press? lives in your macOS menu bar or Windows system tray. Click its icon to open the app. It also displays itself automatically the first time you launch it.
 
 ### Scan to discover shortcuts
 
@@ -105,7 +105,7 @@ There is no telemetry or analytics. Its only network activity is checking GitHub
 
 ### Why did you make this?
 
-Manually discovering conflicts is a chore, yet is important work to do to ensure you don't unintentionally override something important. This app helps to lower the burden of the act of discovery. 
+Manually discovering conflicts is a chore, yet is important work to do to ensure you don't unintentionally override something important. This app helps to lower the effort for the act of discovery. 
 
 For more background on this, read [_How an accessibility designer adds keyboard shortcuts to a web app_](https://ericwbailey.website/published/how-an-accessibility-designer-adds-keyboard-shortcuts-to-a-web-app/).
 
