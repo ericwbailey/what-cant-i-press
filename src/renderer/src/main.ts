@@ -247,6 +247,11 @@ let chordEscapePresses = 0
 // press. Reset on blur and on any key that is not Shift+Tab.
 let chordShiftTabPresses = 0
 
+// Consecutive Backspace presses while the chord field is focused. Mirrors the
+// Shift+Tab counter — releases focus to the *previous* control on the second
+// press. Reset on blur and on any key that is not Backspace.
+let chordBackspacePresses = 0
+
 // Whether the macOS Fn (Globe) key is currently held. Tracked separately because
 // Chromium exposes no `event.fnKey` flag and only inconsistently reports Fn via
 // `getModifierState('Fn')`, so its own keydown/keyup is the reliable signal.
@@ -1611,6 +1616,7 @@ function clearChordFilter(): void {
   heldKeys.clear()
   chordEscapePresses = 0
   chordShiftTabPresses = 0
+  chordBackspacePresses = 0
   chordInput.value = ''
   syncChordClear()
   renderResult()
@@ -1622,16 +1628,18 @@ chordInput.addEventListener(
     event.preventDefault()
 
     // The field captures Tab to build chords, trapping focus. Two consecutive
-    // Escapes release focus to the next control; a Shift+Tab pressed twice (the
-    // second a fresh press after the first Tab's keyup) releases focus to the
-    // previous control. The first press still commits its chord (⎋ or ⇧⇥); the
-    // exit press clears it (clearChordFilter) so the field is empty on the way
-    // out. Any other key resets both counts.
+    // Escapes release focus to the next control; a Shift+Tab or a Backspace
+    // pressed twice (the second a fresh press after the first's keyup) releases
+    // focus to the previous control. The first press still commits its chord (⎋,
+    // ⇧⇥, or ⌫); the exit press clears it (clearChordFilter) so the field is
+    // empty on the way out. Any other key resets all counts.
     const isEscape = event.key === 'Escape' || event.code === 'Escape'
     const isShiftTab = (event.key === 'Tab' || event.code === 'Tab') && event.shiftKey
+    const isBackspace = event.key === 'Backspace' || event.code === 'Backspace'
     if (!event.repeat) {
       if (isEscape) {
         chordShiftTabPresses = 0
+        chordBackspacePresses = 0
         chordEscapePresses += 1
         if (chordEscapePresses >= 2) {
           // Clear before moving focus: clearChordFilter hides #chord-clear and
@@ -1642,8 +1650,18 @@ chordInput.addEventListener(
         }
       } else if (isShiftTab) {
         chordEscapePresses = 0
+        chordBackspacePresses = 0
         chordShiftTabPresses += 1
         if (chordShiftTabPresses >= 2) {
+          clearChordFilter()
+          focusPrevFrom(chordInput)
+          return
+        }
+      } else if (isBackspace) {
+        chordEscapePresses = 0
+        chordShiftTabPresses = 0
+        chordBackspacePresses += 1
+        if (chordBackspacePresses >= 2) {
           clearChordFilter()
           focusPrevFrom(chordInput)
           return
@@ -1651,6 +1669,7 @@ chordInput.addEventListener(
       } else {
         chordEscapePresses = 0
         chordShiftTabPresses = 0
+        chordBackspacePresses = 0
       }
     }
 
@@ -1696,6 +1715,7 @@ chordInput.addEventListener('blur', () => {
   heldKeys.clear()
   chordEscapePresses = 0
   chordShiftTabPresses = 0
+  chordBackspacePresses = 0
   refreshChordField([])
 })
 
