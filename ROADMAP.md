@@ -6,10 +6,10 @@ Want something that isn't listed? Open a [feature request](https://github.com/er
 
 - [x] Make the web version of the app a PWA
 - [x] Add a quick explanation video to README
+- [x] Add Orca keyboard shortcuts as a reference
 - [ ] Sign app on macOS and Windows
 - [ ] Register app with Homebrew
 - [ ] Self-contained help file
-- [ ] Add Orca keyboard shortcuts as a reference
 - [ ] Add support for voice commands
 
 ## Non-goals
