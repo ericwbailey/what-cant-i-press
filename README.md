@@ -177,4 +177,5 @@ To accomodate this, the app runs a best-effort live pass that tries to expand to
 - [JAWS](https://support.freedomscientific.com/Content/Documents/Manuals/JAWS/Keystrokes.txt)
 - [Narrator](https://support.microsoft.com/en-us/accessibility/windows/narrator/appendix-b-narrator-keyboard-commands-and-touch-gestures)
 - [NVDA](https://download.nvaccess.org/documentation/userGuide.html)
+- [Orca](https://gnome.pages.gitlab.gnome.org/orca/help/index.html)
 - [VoiceOver](https://support.apple.com/en-gb/guide/voiceover/vo14111/mac)
