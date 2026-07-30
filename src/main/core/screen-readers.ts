@@ -1,6 +1,6 @@
 /**
- * Curated screen-reader keyboard commands for JAWS, NVDA, and Narrator (Windows)
- * and VoiceOver (macOS).
+ * Curated screen-reader keyboard commands for JAWS, NVDA, and Narrator (Windows),
+ * VoiceOver (macOS), and Orca (Linux/GNOME).
  *
  * Screen readers reserve very large numbers of keystrokes while running, none of
  * which any live OS/menu API can enumerate. These readers are therefore injected
@@ -25,6 +25,8 @@
  * - VoiceOver: Apple VoiceOver User Guide command reference
  *   (support.apple.com/guide/voiceover); the VO modifier is Control + Option
  *   or Caps Lock
+ * - Orca: gnome.pages.gitlab.gnome.org/orca/help (the "how to" guides); the Orca
+ *   Modifier is Insert (Desktop layout) or Caps Lock (Laptop layout)
  *
  * Scope: reader-specific commands only, for both the Desktop and Laptop keyboard
  * layouts. Generic Windows shortcuts, touch gestures, and braille-display
@@ -33,7 +35,10 @@
  * the bare Ctrl "stop reading" tap are likewise excluded (the former is an OS
  * shortcut already surfaced globally; the latter reserves no chord). For
  * VoiceOver, the full published command set is included; the VO modifier stands
- * for Control + Option (or Caps Lock).
+ * for Control + Option (or Caps Lock). For Orca, every documented keystroke from
+ * the "how to" guides is included; only terminal-launch key presses, the
+ * Preferences-dialog key-rebinding steps, and lines that merely define which key
+ * is the Orca Modifier are excluded (none of those are Orca commands).
  */
 
 import type { RawShortcut } from '@shared/shortcuts'
@@ -43,6 +48,7 @@ const JAWS_APP_ID = 'screenreader.jaws'
 const NVDA_APP_ID = 'screenreader.nvda'
 const NARRATOR_APP_ID = 'screenreader.narrator'
 const VOICEOVER_APP_ID = 'screenreader.voiceover'
+const ORCA_APP_ID = 'screenreader.orca'
 
 interface ReaderCommand {
   keystroke: string
@@ -970,6 +976,57 @@ const VOICEOVER_COMMANDS: ReaderCommand[] = [
   cmd('VO + Function + 2 + 2', 'Window Chooser')
 ]
 
+// ---------------------------------------------------------------------------
+// Orca (Linux/GNOME; the Orca Modifier is Insert on Desktop, Caps Lock on Laptop)
+// ---------------------------------------------------------------------------
+
+const ORCA_COMMANDS: ReaderCommand[] = [
+  // General
+  cmd('Super + Alt + S', 'Toggle Orca on and off (GNOME)'),
+  cmd('OM + Space', 'Open Orca preferences'),
+  cmd('Ctrl + OM + Space', 'Open Orca preferences for the current application'),
+
+  // Learn mode
+  cmd('OM + H', 'Enter Learn mode'),
+  cmd('F2', 'List Orca-wide shortcuts (Learn mode)'),
+  cmd('F3', 'List shortcuts for the focused application (Learn mode)'),
+  cmd('Escape', 'Exit Learn mode'),
+
+  // Modifier / Caps Lock
+  cmd('OM + Backspace', 'Bypass the next command (send it to the application)'),
+  cmd('Caps Lock twice quickly', 'Lock or unlock Caps Lock (Laptop layout)'),
+
+  // Reading text and documents
+  cmd('Left Arrow', 'Read the previous character'),
+  cmd('Right Arrow', 'Read the next character'),
+  cmd('Ctrl + Left Arrow', 'Read the previous word'),
+  cmd('Ctrl + Right Arrow', 'Read the next word'),
+  cmd('Up Arrow', 'Read the previous line'),
+  cmd('Down Arrow', 'Read the next line'),
+  cmd('Shift', 'Hold with a reading command to select or unselect text'),
+  cmd('F7', 'Toggle caret navigation (many GNOME applications)'),
+
+  // Text attributes
+  cmd('OM + F', 'Present text attributes of the current object'),
+
+  // Structural navigation
+  cmd('OM + Z', 'Toggle structural navigation'),
+
+  // Tables
+  cmd('OM + F11', 'Toggle cell and row reading for the current table'),
+  cmd('OM + R', 'Set the current row as column headers (double-tap to clear)'),
+  cmd('OM + C', 'Set the current column as row headers (double-tap to clear)'),
+
+  // Forms
+  cmd('Tab', 'Move to the next focusable object'),
+  cmd('Shift + Tab', 'Move to the previous focusable object'),
+  cmd('OM + A', 'Switch from focus mode to browse mode'),
+
+  // Orca Find (differs by keyboard layout)
+  cmd('Num Pad Delete', 'Open Orca Find (Desktop layout)'),
+  cmd('OM + Left Bracket', 'Open Orca Find (Laptop layout)')
+]
+
 /** Builds the raw shortcuts for one reader. */
 function readerRaws(appId: string, appName: string, commands: ReaderCommand[]): RawShortcut[] {
   return commands.map((c) => ({
@@ -987,7 +1044,7 @@ function readerRaws(appId: string, appName: string, commands: ReaderCommand[]): 
 }
 
 /**
- * Returns the full JAWS, NVDA, Narrator, and VoiceOver command sets as raw
+ * Returns the full JAWS, NVDA, Narrator, VoiceOver, and Orca command sets as raw
  * shortcuts. Emitted unconditionally on every scan and every platform; the
  * aggregator dedupes by id so a running reader is not shown twice.
  */
@@ -996,11 +1053,20 @@ export function getScreenReaderShortcuts(): RawShortcut[] {
     ...readerRaws(JAWS_APP_ID, 'JAWS', JAWS_COMMANDS),
     ...readerRaws(NVDA_APP_ID, 'NVDA', NVDA_COMMANDS),
     ...readerRaws(NARRATOR_APP_ID, 'Narrator', NARRATOR_COMMANDS),
-    ...readerRaws(VOICEOVER_APP_ID, 'VoiceOver', VOICEOVER_COMMANDS)
+    ...readerRaws(VOICEOVER_APP_ID, 'VoiceOver', VOICEOVER_COMMANDS),
+    ...readerRaws(ORCA_APP_ID, 'Orca', ORCA_COMMANDS)
   ]
 }
 
-const SCREEN_READER_IDENTIFIERS = ['jfw', 'jaws', 'nvda', 'nvda_service', 'narrator', 'voiceover']
+const SCREEN_READER_IDENTIFIERS = [
+  'jfw',
+  'jaws',
+  'nvda',
+  'nvda_service',
+  'narrator',
+  'voiceover',
+  'orca'
+]
 
 /**
  * Whether a running app is a screen reader. Used to skip its menu bar during the

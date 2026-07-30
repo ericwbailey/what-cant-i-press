@@ -197,7 +197,7 @@ export async function runScan(
 
   onProgress({ phase: 'curated' })
   raws.push(...getCuratedShortcuts(apps, provider.platform))
-  // JAWS, NVDA, Narrator, and VoiceOver are always surfaced, on every platform
+  // JAWS, NVDA, Narrator, VoiceOver, and Orca are always surfaced, on every platform
   // and regardless of whether a copy is running; aggregate dedupes by id so they
   // appear once.
   raws.push(...getScreenReaderShortcuts())

@@ -35,7 +35,7 @@ const SEGMENT_ORDER: ShortcutSegment[] = [
 ]
 
 /** Screen-reader sections always rendered, even before a scan. */
-const READER_APP_NAMES = ['JAWS', 'NVDA', 'Narrator', 'VoiceOver']
+const READER_APP_NAMES = ['JAWS', 'NVDA', 'Narrator', 'VoiceOver', 'Orca']
 
 const ICONS = { Download, CircleHelp, ChevronsUpDown, X, Search, TriangleAlert, ShieldCheck, Pin, Info }
 
@@ -318,6 +318,11 @@ const TEXT_ALIAS_GROUPS: readonly (readonly string[])[] = [
   ['caps', 'caps lock'],
   ['return', '⏎'],
   ['enter', '⌤'],
+  ['delete', 'backspace', '⌫'],
+  ['up', 'u', '↑'],
+  ['down', 'dwn', 'd', '↓'],
+  ['left', 'lft', 'l', '←'],
+  ['right', 'rght', 'r', '→'],
   ['page up', 'pg up', 'pgup'],
   ['page down', 'pg dn', 'pg down', 'pgdn']
 ]
@@ -330,26 +335,40 @@ const TEXT_ALIAS_GROUPS: readonly (readonly string[])[] = [
  * command of that reader via the app-name column.
  *
  * - Insert is the JAWS (already the literal `Insert` token), NVDA, and Narrator key.
+ *   It is also the Orca Modifier in Orca's Desktop layout.
  * - Caps Lock is the VoiceOver (`VO`) and Narrator key; "caps" resolves here too,
- *   since it aliases "caps lock".
+ *   since it aliases "caps lock". It is also the Orca Modifier in Orca's Laptop
+ *   layout.
  */
 const READER_KEY_ALIASES: readonly { triggers: readonly string[]; comboTerms: readonly string[] }[] =
   [
-    { triggers: ['insert'], comboTerms: ['nvda', 'narrator'] },
-    { triggers: ['caps lock', 'caps'], comboTerms: ['vo', 'narrator'] }
+    { triggers: ['insert'], comboTerms: ['nvda', 'narrator', 'om + '] },
+    { triggers: ['caps lock', 'caps'], comboTerms: ['vo', 'narrator', 'om + '] }
   ]
+
+/**
+ * Collapses the spaced `" + "` combo separator (and any run of whitespace) to a
+ * single space, so a typed space matches the separator: `om space` is treated
+ * the same as `om + space`. Only the spaced separator collapses — bare
+ * `+`-joined labels (Windows/Linux OS combos) and multi-word key names
+ * ("Num Pad Plus", "Page Up") are preserved. Input is expected pre-lowercased.
+ */
+function normalizeSeparators(s: string): string {
+  return s.replace(/ \+ /g, ' ').replace(/\s+/g, ' ').trim()
+}
 
 type QueryClause = { term: string; comboOnly: boolean }
 
 /**
- * Expands a normalized filter query into substring clauses: the query itself,
- * plus modifier-group synonyms (matched against the full text) and reader-key
- * terms (matched against the combo label only). Interior whitespace is collapsed
- * for alias lookup so e.g. "caps  lock" still triggers.
+ * Expands a filter query into substring clauses: the query itself, plus
+ * modifier-group synonyms (matched against the full text) and reader-key terms
+ * (matched against the combo label only). The base query is separator-normalized
+ * so a typed space matches `" + "` (see normalizeSeparators); reader-key alias
+ * terms stay raw so they keep matching the literal `" + "`-delimited combo.
  */
 function queryClauses(query: string): QueryClause[] {
-  const clauses: QueryClause[] = [{ term: query, comboOnly: false }]
-  const key = query.replace(/\s+/g, ' ')
+  const key = normalizeSeparators(query)
+  const clauses: QueryClause[] = [{ term: key, comboOnly: false }]
   for (const group of TEXT_ALIAS_GROUPS) {
     if (group.includes(key)) {
       for (const term of group) if (term !== key) clauses.push({ term, comboOnly: false })
@@ -365,11 +384,11 @@ function queryClauses(query: string): QueryClause[] {
 
 function matchesQuery(shortcut: Shortcut, clauses: QueryClause[]): boolean {
   const combo = shortcut.comboLabel.toLowerCase()
-  const haystack = `${combo} ${(shortcut.appName ?? '').toLowerCase()} ${(
-    shortcut.description ?? ''
-  ).toLowerCase()}`
+  const normHaystack = normalizeSeparators(
+    `${combo} ${(shortcut.appName ?? '').toLowerCase()} ${(shortcut.description ?? '').toLowerCase()}`
+  )
   for (const clause of clauses) {
-    if (clause.comboOnly ? combo.includes(clause.term) : haystack.includes(clause.term)) {
+    if (clause.comboOnly ? combo.includes(clause.term) : normHaystack.includes(clause.term)) {
       return true
     }
   }
@@ -643,7 +662,8 @@ const READER_NOTES: Record<string, string> = {
   JAWS: 'JAWS key is Insert by default - assumes Desktop keyboard layout',
   NVDA: 'NVDA key is Insert by default - assumes Desktop keyboard layout',
   Narrator: 'Narrator key is Insert or Caps Lock by default',
-  VoiceOver: 'VoiceOver key is Control + Option or Caps Lock by default'
+  VoiceOver: 'VoiceOver key is Control + Option or Caps Lock by default',
+  Orca: 'Orca Modifier key (OM) is Insert by default - assumes Desktop keyboard layout'
 }
 
 const READER_MANUAL_URLS: Record<string, string> = {
@@ -651,7 +671,8 @@ const READER_MANUAL_URLS: Record<string, string> = {
   NVDA: 'https://download.nvaccess.org/documentation/userGuide.html',
   Narrator:
     'https://support.microsoft.com/en-us/accessibility/windows/narrator/appendix-b-narrator-keyboard-commands-and-touch-gestures',
-  VoiceOver: 'https://support.apple.com/en-gb/guide/voiceover/vo14111/mac'
+  VoiceOver: 'https://support.apple.com/en-gb/guide/voiceover/vo14111/mac',
+  Orca: 'https://gnome.pages.gitlab.gnome.org/orca/help/index.html'
 }
 
 // Screen-reader label for a row's button: "{combo}. {description}. {badge}."
@@ -1405,7 +1426,7 @@ pinButton.addEventListener('click', () => void togglePin())
 
 // Exports the currently visible shortcuts. After a scan that is the scan result;
 // in the empty state (no scan yet) it is the curated screen-reader content (JAWS,
-// NVDA, Narrator, VoiceOver), wrapped in a matching envelope so the file shape is
+// NVDA, Narrator, VoiceOver, Orca), wrapped in a matching envelope so the file shape is
 // consistent either way.
 function doExport(): void {
   if (exportButton.getAttribute('aria-disabled') === 'true') return
