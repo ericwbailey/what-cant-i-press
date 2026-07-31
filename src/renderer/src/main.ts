@@ -1589,12 +1589,35 @@ function focusableElements(): HTMLElement[] {
   )
 }
 
+/**
+ * Focuses `target`, and if focus does not land, retries on the next animation
+ * frame and once more after a timeout. The chord exits clear the filter first,
+ * which rebuilds `#content` via innerHTML in the same tick; focusing a node that
+ * a synchronous re-render just re-created does not always land in the menu-bar
+ * popover window (the previous-direction targets — the last result row — live
+ * inside that rebuilt subtree, while the next-direction target `#export` sits
+ * outside it and focuses fine). The synchronous attempt preserves behavior
+ * wherever it already works, so the deferred retries only engage on the miss.
+ */
+function focusReliably(target: HTMLElement | null | undefined): void {
+  if (!target) return
+  const landed = (): boolean => {
+    target.focus()
+    return document.activeElement === target
+  }
+  if (landed()) return
+  requestAnimationFrame(() => {
+    if (landed()) return
+    setTimeout(landed, 0)
+  })
+}
+
 /** Moves focus to the next focusable element after `current`, wrapping to first. */
 function focusNextFrom(current: HTMLElement): void {
   const items = focusableElements()
   const index = items.indexOf(current)
   if (index === -1) return
-  ;(items[index + 1] ?? items[0])?.focus()
+  focusReliably(items[index + 1] ?? items[0])
 }
 
 /** Moves focus to the previous focusable element before `current`, wrapping to last. */
@@ -1602,7 +1625,7 @@ function focusPrevFrom(current: HTMLElement): void {
   const items = focusableElements()
   const index = items.indexOf(current)
   if (index === -1) return
-  ;(items[index - 1] ?? items[items.length - 1])?.focus()
+  focusReliably(items[index - 1] ?? items[items.length - 1])
 }
 
 /**
