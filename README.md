@@ -95,11 +95,17 @@ UI Automation needs no up-front permission for ordinary apps. Reading menu accel
 
 ## Privacy
 
-All work is performed on-device. Nothing about what you scan ever leaves your computer.
+### App
+
+All work executed on the app is performed on-device. Nothing about what you scan ever leaves your computer.
 
 The keyboard shortcuts the app reads are analyzed locally and shown only to you. No data is collected, stored off-device, or sent anywhere. 
 
-There is no telemetry or analytics. Its only network activity is checking GitHub for new releases and opening links, such as the project page, and that is only triggered by manual activation. 
+There is no telemetry or analytics for the app. Its only network activity is checking GitHub for new releases and opening links, such as the project page, and that is only triggered by manual activation. 
+
+### Website
+
+[The companion website uses](https://what-cant-i-press.app/) [Plausible Analytics](https://plausible.io/), a privacy-focused lightweight analytics service.
 
 ## FAQ
 
