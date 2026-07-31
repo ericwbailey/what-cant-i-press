@@ -3679,6 +3679,122 @@
           "description": "Window Chooser"
         }
       ]
+    },
+    {
+      "app": "Orca",
+      "appId": "screenreader.orca",
+      "note": "Orca Modifier key (OM) is Insert by default - assumes Desktop keyboard layout",
+      "manualUrl": "https://gnome.pages.gitlab.gnome.org/orca/help/index.html",
+      "commands": [
+        {
+          "keystroke": "Super + Alt + S",
+          "description": "Toggle Orca on and off (GNOME)"
+        },
+        {
+          "keystroke": "OM + Space",
+          "description": "Open Orca preferences"
+        },
+        {
+          "keystroke": "Ctrl + OM + Space",
+          "description": "Open Orca preferences for the current application"
+        },
+        {
+          "keystroke": "OM + H",
+          "description": "Enter Learn mode"
+        },
+        {
+          "keystroke": "F2",
+          "description": "List Orca-wide shortcuts (Learn mode)"
+        },
+        {
+          "keystroke": "F3",
+          "description": "List shortcuts for the focused application (Learn mode)"
+        },
+        {
+          "keystroke": "Escape",
+          "description": "Exit Learn mode"
+        },
+        {
+          "keystroke": "OM + Backspace",
+          "description": "Bypass the next command (send it to the application)"
+        },
+        {
+          "keystroke": "Caps Lock twice quickly",
+          "description": "Lock or unlock Caps Lock (Laptop layout)"
+        },
+        {
+          "keystroke": "Left Arrow",
+          "description": "Read the previous character"
+        },
+        {
+          "keystroke": "Right Arrow",
+          "description": "Read the next character"
+        },
+        {
+          "keystroke": "Ctrl + Left Arrow",
+          "description": "Read the previous word"
+        },
+        {
+          "keystroke": "Ctrl + Right Arrow",
+          "description": "Read the next word"
+        },
+        {
+          "keystroke": "Up Arrow",
+          "description": "Read the previous line"
+        },
+        {
+          "keystroke": "Down Arrow",
+          "description": "Read the next line"
+        },
+        {
+          "keystroke": "Shift",
+          "description": "Hold with a reading command to select or unselect text"
+        },
+        {
+          "keystroke": "F7",
+          "description": "Toggle caret navigation (many GNOME applications)"
+        },
+        {
+          "keystroke": "OM + F",
+          "description": "Present text attributes of the current object"
+        },
+        {
+          "keystroke": "OM + Z",
+          "description": "Toggle structural navigation"
+        },
+        {
+          "keystroke": "OM + F11",
+          "description": "Toggle cell and row reading for the current table"
+        },
+        {
+          "keystroke": "OM + R",
+          "description": "Set the current row as column headers (double-tap to clear)"
+        },
+        {
+          "keystroke": "OM + C",
+          "description": "Set the current column as row headers (double-tap to clear)"
+        },
+        {
+          "keystroke": "Tab",
+          "description": "Move to the next focusable object"
+        },
+        {
+          "keystroke": "Shift + Tab",
+          "description": "Move to the previous focusable object"
+        },
+        {
+          "keystroke": "OM + A",
+          "description": "Switch from focus mode to browse mode"
+        },
+        {
+          "keystroke": "Num Pad Delete",
+          "description": "Open Orca Find (Desktop layout)"
+        },
+        {
+          "keystroke": "OM + Left Bracket",
+          "description": "Open Orca Find (Laptop layout)"
+        }
+      ]
     }
   ];
 
