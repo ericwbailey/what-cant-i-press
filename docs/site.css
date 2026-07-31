@@ -463,10 +463,11 @@ kbd {
 }
 
 .kbd-text {
-  white-space: normal;
-  text-align: center;
+  font-variant-emoji: text;
   line-height: 1.35;
   overflow-wrap: anywhere;
+  text-align: center;
+  white-space: normal;
 }
 
 .kbd-plus {
