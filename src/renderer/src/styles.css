@@ -399,12 +399,12 @@ html[data-input='keyboard'] .row-button:focus {
 
 /* Draw the chord input's ring inside its box so it reads as a filled field. */
 html[data-input='keyboard'] .chord-input:focus {
-  outline-offset: -4px;
+  outline-offset: -3px;
 }
 
 /* Draw the details disclosure ring inside its box, matching the chord input. */
 html[data-input='keyboard'] summary:focus {
-  outline-offset: -4px;
+  outline-offset: -3px;
 }
 
 /* F6 landmark targets are focused programmatically for landmark navigation only;
