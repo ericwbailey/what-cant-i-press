@@ -4274,7 +4274,7 @@
     chordInput.focus();
   });
   function init() {
-    readers = SHORTCUT_GROUPS;
+    readers = [...SHORTCUT_GROUPS].sort((a, b) => a.app.localeCompare(b.app));
     allShortcuts = flatten(readers);
     syncClearButtons();
     refreshChordField([]);
