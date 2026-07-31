@@ -1583,7 +1583,7 @@ function commitFromHeld(mods: Modifier[]): void {
  */
 function focusableElements(): HTMLElement[] {
   const selector =
-    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
   return [...document.querySelectorAll<HTMLElement>(selector)].filter(
     (el) => el.tabIndex !== -1 && isFocusableVisible(el)
   )

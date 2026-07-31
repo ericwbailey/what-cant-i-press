@@ -397,6 +397,16 @@ html[data-input='keyboard'] .row-button:focus {
   outline-offset: 7px;
 }
 
+/* Draw the chord input's ring inside its box so it reads as a filled field. */
+html[data-input='keyboard'] .chord-input:focus {
+  outline-offset: -4px;
+}
+
+/* Draw the details disclosure ring inside its box, matching the chord input. */
+html[data-input='keyboard'] summary:focus {
+  outline-offset: -4px;
+}
+
 /* F6 landmark targets are focused programmatically for landmark navigation only;
    they are tabindex="-1" (not Tab stops) and must never show a focus ring. */
 [data-f6]:focus,
