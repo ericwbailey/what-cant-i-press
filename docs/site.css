@@ -218,7 +218,6 @@ input[type='text'] {
 
 /* MARK: Inputs */
 .filters {
-  background: var(--color-surface-sticky);
   padding: 10px 0;
   margin-top: 2rem;
   display: grid;
