@@ -1585,31 +1585,24 @@ function focusableElements(): HTMLElement[] {
   const selector =
     'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
   return [...document.querySelectorAll<HTMLElement>(selector)].filter(
-    (el) => el.tabIndex !== -1 && el.getClientRects().length > 0
+    (el) => el.tabIndex !== -1 && isFocusableVisible(el)
   )
 }
 
 /**
- * Focuses `target`, and if focus does not land, retries on the next animation
- * frame and once more after a timeout. The chord exits clear the filter first,
- * which rebuilds `#content` via innerHTML in the same tick; focusing a node that
- * a synchronous re-render just re-created does not always land in the menu-bar
- * popover window (the previous-direction targets — the last result row — live
- * inside that rebuilt subtree, while the next-direction target `#export` sits
- * outside it and focuses fine). The synchronous attempt preserves behavior
- * wherever it already works, so the deferred retries only engage on the miss.
+ * Reports whether `el` can actually receive focus right now. A collapsed
+ * `<details>` hides its contents via `content-visibility`, which — unlike
+ * `display:none` — keeps layout boxes, so `getClientRects()` still reports a
+ * rect for a control the user cannot reach and `.focus()` silently no-ops.
+ * `checkVisibility()` accounts for `content-visibility`, so it rejects those
+ * collapsed-section controls while still accepting off-screen rows in a
+ * `content-visibility:auto` list (which do focus, scrolling into view). The
+ * `getClientRects` fallback covers runtimes without `checkVisibility`.
  */
-function focusReliably(target: HTMLElement | null | undefined): void {
-  if (!target) return
-  const landed = (): boolean => {
-    target.focus()
-    return document.activeElement === target
-  }
-  if (landed()) return
-  requestAnimationFrame(() => {
-    if (landed()) return
-    setTimeout(landed, 0)
-  })
+function isFocusableVisible(el: HTMLElement): boolean {
+  return typeof el.checkVisibility === 'function'
+    ? el.checkVisibility()
+    : el.getClientRects().length > 0
 }
 
 /** Moves focus to the next focusable element after `current`, wrapping to first. */
@@ -1617,7 +1610,7 @@ function focusNextFrom(current: HTMLElement): void {
   const items = focusableElements()
   const index = items.indexOf(current)
   if (index === -1) return
-  focusReliably(items[index + 1] ?? items[0])
+  ;(items[index + 1] ?? items[0])?.focus()
 }
 
 /** Moves focus to the previous focusable element before `current`, wrapping to last. */
@@ -1625,7 +1618,7 @@ function focusPrevFrom(current: HTMLElement): void {
   const items = focusableElements()
   const index = items.indexOf(current)
   if (index === -1) return
-  focusReliably(items[index - 1] ?? items[items.length - 1])
+  ;(items[index - 1] ?? items[items.length - 1])?.focus()
 }
 
 /**
