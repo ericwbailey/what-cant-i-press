@@ -955,6 +955,41 @@ details.segment:not([open]) > .jump-row {
   width: 1px;
 }
 
+/* Zero-height positioned anchor: contains only the absolutely-positioned skip
+   link, so it adds no height (no layout shift) yet gives the revealed chip a
+   containing block at its true in-flow spot, just above the shortcut lists. */
+.skip-link-wrap {
+  position: relative;
+}
+
+/* Skip link: hidden by .hide-visually, revealed on focus as a tooltip-styled
+   chip (mirrors .tip). Absolutely positioned within .skip-link-wrap and
+   horizontally centered, so it appears where it sits in the DOM and revealing
+   it causes no vertical layout shift. outline:none because the reveal itself is
+   the focus affordance (the bare <a> otherwise shows the UA focus ring). */
+.skip-link:focus {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  outline: none;
+  clip: auto;
+  clip-path: none;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+  padding: 5px 9px;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px var(--tooltip-shadow);
+  text-decoration: none;
+}
+
 .app-group {
   margin: 14px 0 2px;
 }

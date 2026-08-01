@@ -182,6 +182,9 @@ root.innerHTML = `
     <div class="status" id="status"></div>
     <button class="result-toggle" id="expand" type="button"><i data-lucide="chevrons-up-down" aria-hidden="true"></i>Expand/Collapse All</button>
   </div>
+  <div class="skip-link-wrap">
+    <a class="skip-link hide-visually" href="#footer">Skip lists of app keyboard shortcuts</a>
+  </div>
   <div id="banner"></div>
   <main id="content" data-f6 tabindex="-1"></main>
   <div class="chord-bar" id="chord-bar" data-f6 tabindex="-1" hidden>
@@ -347,8 +350,8 @@ const TEXT_ALIAS_GROUPS: readonly (readonly string[])[] = [
  */
 const READER_KEY_ALIASES: readonly { triggers: readonly string[]; comboTerms: readonly string[] }[] =
   [
-    { triggers: ['insert'], comboTerms: ['nvda', 'narrator', 'om + '] },
-    { triggers: ['caps lock', 'caps'], comboTerms: ['vo', 'narrator', 'om + '] }
+    { triggers: ['insert'], comboTerms: ['nvda', 'na + ', 'om + '] },
+    { triggers: ['caps lock', 'caps'], comboTerms: ['vo', 'na + ', 'om + '] }
   ]
 
 /**
@@ -666,8 +669,8 @@ function symbolizeReaderToken(token: string, appName: string | undefined): strin
 const READER_NOTES: Record<string, string> = {
   JAWS: 'JAWS key is Insert by default - assumes Desktop keyboard layout',
   NVDA: 'NVDA key is Insert by default - assumes Desktop keyboard layout',
-  Narrator: 'Narrator key is Insert or Caps Lock by default',
-  VoiceOver: 'VoiceOver key is Control + Option or Caps Lock by default',
+  Narrator: 'Narrator key (NA) is Insert or Caps Lock by default',
+  VoiceOver: 'VoiceOver (VO) key is Control + Option or Caps Lock by default',
   Orca: 'Orca Modifier key (OM) is Insert by default - assumes Desktop keyboard layout'
 }
 
@@ -902,11 +905,11 @@ function renderAppSection(
   const manualUrl =
     segment === 'screen-reader' ? READER_MANUAL_URLS[appName] : undefined
   const manualLabel = manualUrl
-    ? `<a class="manual-link" href="${escapeHtml(manualUrl)}">the manual</a>`
-    : 'the manual'
+    ? `<a class="manual-link" href="${escapeHtml(manualUrl)}">${escapeHtml(appName)} manual</a>`
+    : `${escapeHtml(appName)} manual`
   const guessNote =
     segment === 'screen-reader'
-      ? `<p class="guess-note">Keyboard shortcuts sourced from ${manualLabel}</p>`
+      ? `<p class="guess-note">Keyboard shortcuts sourced from the ${manualLabel}</p>`
       : ''
   const readerNoteText =
     segment === 'screen-reader' ? READER_NOTES[appName] : undefined
