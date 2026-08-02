@@ -5,41 +5,73 @@
   var TEXT_ALIAS_GROUPS = [
     ["fn", "function"],
     ["ctrl", "control", "\u2303"],
-    ["opt", "option", "\u2325"],
+    ["alt", "opt", "option", "\u2325"],
+    ["shift", "\u21E7"],
     ["cmd", "command", "\u2318"],
     ["caps", "caps lock"],
-    ["return", "\u23CE"],
-    ["enter", "\u2324"],
-    ["page up", "pg up", "pgup"],
-    ["page down", "pg dn", "pg down", "pgdn"]
+    ["win", "windows"],
+    ["return", "enter", "\u21A9", "\u2305"],
+    ["esc", "escape", "\u238B"],
+    ["tab", "\u21E5"],
+    ["space", "spacebar"],
+    ["delete", "backspace", "\u232B"],
+    ["del", "forward delete", "\u2326"],
+    ["up", "\u2191"],
+    ["down", "dwn", "\u2193"],
+    ["left", "lft", "\u2190"],
+    ["right", "rght", "\u2192"],
+    ["home", "\u2196"],
+    ["end", "\u2198"],
+    ["page up", "pg up", "pgup", "\u21DE"],
+    ["page down", "pg dn", "pg down", "pgdn", "\u21DF"],
+    ["clear", "\u2327"],
+    ["settings", "preferences", "prefs"]
   ];
   var READER_KEY_ALIASES = [
-    { triggers: ["insert"], comboTerms: ["nvda", "narrator"] },
-    { triggers: ["caps lock", "caps"], comboTerms: ["vo", "narrator"] }
+    { triggers: ["insert"], comboTerms: ["nvda", "na + ", "om + "] },
+    { triggers: ["caps lock", "caps"], comboTerms: ["vo", "na + ", "om + "] }
   ];
+  function normalizeSeparators(s) {
+    return s.replace(/, then /g, " ").replace(/ \+ /g, " ").replace(/(?<=\w)\+(?=\w)/g, " ").replace(/\s+/g, " ").trim();
+  }
+  var READER_NAME_ALIASES = [{ triggers: ["na"], appName: "Narrator" }];
   function queryClauses(query) {
-    const clauses = [{ term: query, comboOnly: false }];
-    const key = query.replace(/\s+/g, " ");
+    const key = normalizeSeparators(query);
+    for (const alias of READER_NAME_ALIASES) {
+      if (alias.triggers.includes(key)) return [{ kind: "app", appName: alias.appName.toLowerCase() }];
+    }
+    const clauses = [{ kind: "text", term: key }];
     for (const group of TEXT_ALIAS_GROUPS) {
       if (group.includes(key)) {
-        for (const term of group) if (term !== key) clauses.push({ term, comboOnly: false });
+        for (const term of group) if (term !== key) clauses.push({ kind: "text", term });
       }
     }
     for (const alias of READER_KEY_ALIASES) {
       if (alias.triggers.includes(key)) {
-        for (const term of alias.comboTerms) clauses.push({ term, comboOnly: true });
+        for (const term of alias.comboTerms) clauses.push({ kind: "combo", term });
       }
     }
     return clauses;
   }
-  function matchesQuery(shortcut, clauses) {
+  var searchTextCache = /* @__PURE__ */ new WeakMap();
+  function searchTextFor(shortcut) {
     var _a, _b;
+    const cached = searchTextCache.get(shortcut);
+    if (cached) return cached;
     const combo = shortcut.comboLabel.toLowerCase();
-    const haystack = `${combo} ${((_a = shortcut.appName) != null ? _a : "").toLowerCase()} ${((_b = shortcut.description) != null ? _b : "").toLowerCase()}`;
+    const appName = ((_a = shortcut.appName) != null ? _a : "").toLowerCase();
+    const hay = normalizeSeparators(
+      `${combo} ${appName} ${((_b = shortcut.description) != null ? _b : "").toLowerCase()}`
+    );
+    const text = { combo, appName, hay };
+    searchTextCache.set(shortcut, text);
+    return text;
+  }
+  function matchesQuery(shortcut, clauses) {
+    const { combo, appName, hay } = searchTextFor(shortcut);
     for (const clause of clauses) {
-      if (clause.comboOnly ? combo.includes(clause.term) : haystack.includes(clause.term)) {
-        return true;
-      }
+      const hit = clause.kind === "combo" ? combo.includes(clause.term) : clause.kind === "app" ? appName === clause.appName : hay.includes(clause.term);
+      if (hit) return true;
     }
     return false;
   }
@@ -2095,347 +2127,347 @@
     {
       "app": "Narrator",
       "appId": "screenreader.narrator",
-      "note": "Narrator key is Insert or Caps Lock by default",
+      "note": "Narrator key (NA) is Insert or Caps Lock by default",
       "manualUrl": "https://support.microsoft.com/en-us/accessibility/windows/narrator/appendix-b-narrator-keyboard-commands-and-touch-gestures",
       "commands": [
         {
-          "keystroke": "Narrator + Escape",
+          "keystroke": "NA + Escape",
           "description": "Exit Narrator"
         },
         {
-          "keystroke": "Narrator + 1",
+          "keystroke": "NA + 1",
           "description": "Toggle input learning"
         },
         {
-          "keystroke": "Narrator + Right Arrow",
+          "keystroke": "NA + Right Arrow",
           "description": "Move to next item"
         },
         {
-          "keystroke": "Narrator + Left Arrow",
+          "keystroke": "NA + Left Arrow",
           "description": "Move to previous item"
         },
         {
-          "keystroke": "Narrator + Page Up",
+          "keystroke": "NA + Page Up",
           "description": "Change view"
         },
         {
-          "keystroke": "Ctrl + Narrator + Up Arrow",
+          "keystroke": "Ctrl + NA + Up Arrow",
           "description": "Change view"
         },
         {
-          "keystroke": "Narrator + Page Down",
+          "keystroke": "NA + Page Down",
           "description": "Change view"
         },
         {
-          "keystroke": "Ctrl + Narrator + Down Arrow",
+          "keystroke": "Ctrl + NA + Down Arrow",
           "description": "Change view"
         },
         {
-          "keystroke": "Narrator + F1",
+          "keystroke": "NA + F1",
           "description": "Show commands list"
         },
         {
-          "keystroke": "Narrator + F2",
+          "keystroke": "NA + F2",
           "description": "Show commands for current item"
         },
         {
-          "keystroke": "Narrator + Enter",
+          "keystroke": "NA + Enter",
           "description": "Do primary action"
         },
         {
-          "keystroke": "Narrator + Ctrl + Enter",
+          "keystroke": "NA + Ctrl + Enter",
           "description": "Toggle search mode"
         },
         {
-          "keystroke": "Narrator + Backslash",
+          "keystroke": "NA + Backslash",
           "description": "Read the status bar in apps such as Word, Excel, and PowerPoint"
         },
         {
-          "keystroke": "Narrator + F12",
+          "keystroke": "NA + F12",
           "description": "Read current time and date"
         },
         {
-          "keystroke": "Narrator + Shift + B",
+          "keystroke": "NA + Shift + B",
           "description": "Read Battery and Network status"
         },
         {
-          "keystroke": "Narrator + Alt + B",
+          "keystroke": "NA + Alt + B",
           "description": "Toggle braille viewer"
         },
         {
-          "keystroke": "Narrator + Ctrl + C",
+          "keystroke": "NA + Ctrl + C",
           "description": "Toggle Screen curtain"
         },
         {
-          "keystroke": "Narrator + Ctrl + D",
+          "keystroke": "NA + Ctrl + D",
           "description": "Describe image using an online service or get the webpage source of a link"
         },
         {
-          "keystroke": "Narrator + S",
+          "keystroke": "NA + S",
           "description": "Get a webpage summary"
         },
         {
-          "keystroke": "Narrator + S twice quickly",
+          "keystroke": "NA + S twice quickly",
           "description": "Get webpage summary and popular links dialog box"
         },
         {
-          "keystroke": "Narrator + Shift + S",
+          "keystroke": "NA + Shift + S",
           "description": "Speech off"
         },
         {
-          "keystroke": "Narrator + Alt + F",
+          "keystroke": "NA + Alt + F",
           "description": "Provide Narrator feedback"
         },
         {
-          "keystroke": "Narrator + Z",
+          "keystroke": "NA + Z",
           "description": "Lock Narrator key"
         },
         {
-          "keystroke": "Narrator + Ctrl + F12",
+          "keystroke": "NA + Ctrl + F12",
           "description": "Toggle developer mode"
         },
         {
-          "keystroke": "Narrator + 3",
+          "keystroke": "NA + 3",
           "description": "Pass keys to application"
         },
         {
-          "keystroke": "Narrator + 4",
+          "keystroke": "NA + 4",
           "description": "Change capitalization reading mode"
         },
         {
-          "keystroke": "Narrator + Alt + M",
+          "keystroke": "NA + Alt + M",
           "description": "Toggle mouse mode"
         },
         {
-          "keystroke": "Narrator + H",
+          "keystroke": "NA + H",
           "description": "Turn on or off Outlook column header reading"
         },
         {
-          "keystroke": "Ctrl + Narrator + Plus",
+          "keystroke": "Ctrl + NA + Plus",
           "description": "Increase voice volume"
         },
         {
-          "keystroke": "Ctrl + Narrator + Num Pad Plus",
+          "keystroke": "Ctrl + NA + Num Pad Plus",
           "description": "Increase voice volume"
         },
         {
-          "keystroke": "Ctrl + Narrator + Minus",
+          "keystroke": "Ctrl + NA + Minus",
           "description": "Decrease voice volume"
         },
         {
-          "keystroke": "Ctrl + Narrator + Num Pad Minus",
+          "keystroke": "Ctrl + NA + Num Pad Minus",
           "description": "Decrease voice volume"
         },
         {
-          "keystroke": "Narrator + Plus",
+          "keystroke": "NA + Plus",
           "description": "Increase voice speed"
         },
         {
-          "keystroke": "Narrator + Minus",
+          "keystroke": "NA + Minus",
           "description": "Decrease voice speed"
         },
         {
-          "keystroke": "Narrator + Alt + Plus",
+          "keystroke": "NA + Alt + Plus",
           "description": "Move to the next voice"
         },
         {
-          "keystroke": "Narrator + Alt + Num Pad Plus",
+          "keystroke": "NA + Alt + Num Pad Plus",
           "description": "Move to the next voice"
         },
         {
-          "keystroke": "Narrator + Alt + Minus",
+          "keystroke": "NA + Alt + Minus",
           "description": "Move to the previous voice"
         },
         {
-          "keystroke": "Narrator + Alt + Num Pad Minus",
+          "keystroke": "NA + Alt + Num Pad Minus",
           "description": "Move to the previous voice"
         },
         {
-          "keystroke": "Narrator + Alt + Left Bracket",
+          "keystroke": "NA + Alt + Left Bracket",
           "description": "Change to the prior punctuation reading mode"
         },
         {
-          "keystroke": "Narrator + Alt + Right Bracket",
+          "keystroke": "NA + Alt + Right Bracket",
           "description": "Change to the next punctuation reading mode"
         },
         {
-          "keystroke": "Narrator + V",
+          "keystroke": "NA + V",
           "description": "Increase verbosity mode"
         },
         {
-          "keystroke": "Narrator + Shift + V",
+          "keystroke": "NA + Shift + V",
           "description": "Decrease verbosity mode"
         },
         {
-          "keystroke": "Narrator + 2",
+          "keystroke": "NA + 2",
           "description": "Toggle character reading"
         },
         {
-          "keystroke": "Narrator + Slash",
+          "keystroke": "NA + Slash",
           "description": "Read context"
         },
         {
-          "keystroke": "Narrator + Alt + Slash",
+          "keystroke": "NA + Alt + Slash",
           "description": "Set read context verbosity"
         },
         {
-          "keystroke": "Narrator + Ctrl + Slash",
+          "keystroke": "NA + Ctrl + Slash",
           "description": "Change read context order"
         },
         {
-          "keystroke": "Narrator + Tab",
+          "keystroke": "NA + Tab",
           "description": "Read item"
         },
         {
-          "keystroke": "Narrator + Num Pad 5",
+          "keystroke": "NA + Num Pad 5",
           "description": "Read item"
         },
         {
-          "keystroke": "Narrator + Tab twice quickly",
+          "keystroke": "NA + Tab twice quickly",
           "description": "Read item spelled out"
         },
         {
-          "keystroke": "Narrator + Num Pad 5 twice quickly",
+          "keystroke": "NA + Num Pad 5 twice quickly",
           "description": "Read item spelled out"
         },
         {
-          "keystroke": "Narrator + K twice quickly",
+          "keystroke": "NA + K twice quickly",
           "description": "Read item spelled out"
         },
         {
-          "keystroke": "Narrator + Ctrl + Num Pad 5 twice quickly",
+          "keystroke": "NA + Ctrl + Num Pad 5 twice quickly",
           "description": "Read item spelled out"
         },
         {
-          "keystroke": "Narrator + 0",
+          "keystroke": "NA + 0",
           "description": "Read item advanced"
         },
         {
-          "keystroke": "Narrator + T",
+          "keystroke": "NA + T",
           "description": "Read window title"
         },
         {
-          "keystroke": "Narrator + W",
+          "keystroke": "NA + W",
           "description": "Read window"
         },
         {
-          "keystroke": "Narrator + X",
+          "keystroke": "NA + X",
           "description": "Re-hear what Narrator spoke last"
         },
         {
-          "keystroke": "Narrator + Ctrl + X",
+          "keystroke": "NA + Ctrl + X",
           "description": "Copy last spoken phrase to clipboard"
         },
         {
-          "keystroke": "Narrator + Alt + X",
+          "keystroke": "NA + Alt + X",
           "description": "Open speech recap window for history and live transcription"
         },
         {
-          "keystroke": "Narrator + R",
+          "keystroke": "NA + R",
           "description": "Read from cursor"
         },
         {
-          "keystroke": "Ctrl + Narrator + R",
+          "keystroke": "Ctrl + NA + R",
           "description": "Start reading document"
         },
         {
-          "keystroke": "Narrator + Down Arrow",
+          "keystroke": "NA + Down Arrow",
           "description": "Start reading document"
         },
         {
-          "keystroke": "Narrator + C",
+          "keystroke": "NA + C",
           "description": "Read document"
         },
         {
-          "keystroke": "Narrator + Shift + J",
+          "keystroke": "NA + Shift + J",
           "description": "Read text from start to cursor"
         },
         {
-          "keystroke": "Narrator + Alt + Home",
+          "keystroke": "NA + Alt + Home",
           "description": "Read text from start to cursor"
         },
         {
-          "keystroke": "Ctrl + Narrator + U",
+          "keystroke": "Ctrl + NA + U",
           "description": "Read previous page"
         },
         {
-          "keystroke": "Ctrl + Narrator + I",
+          "keystroke": "Ctrl + NA + I",
           "description": "Read current page"
         },
         {
-          "keystroke": "Ctrl + Narrator + O",
+          "keystroke": "Ctrl + NA + O",
           "description": "Read next page"
         },
         {
-          "keystroke": "Ctrl + Narrator + J",
+          "keystroke": "Ctrl + NA + J",
           "description": "Read previous paragraph"
         },
         {
-          "keystroke": "Ctrl + Narrator + K",
+          "keystroke": "Ctrl + NA + K",
           "description": "Read current paragraph"
         },
         {
-          "keystroke": "Ctrl + Narrator + L",
+          "keystroke": "Ctrl + NA + L",
           "description": "Read next paragraph"
         },
         {
-          "keystroke": "Narrator + Ctrl + M",
+          "keystroke": "NA + Ctrl + M",
           "description": "Read previous sentence"
         },
         {
-          "keystroke": "Narrator + Ctrl + Comma",
+          "keystroke": "NA + Ctrl + Comma",
           "description": "Read current sentence"
         },
         {
-          "keystroke": "Narrator + Ctrl + Period",
+          "keystroke": "NA + Ctrl + Period",
           "description": "Read next sentence"
         },
         {
-          "keystroke": "Narrator + U",
+          "keystroke": "NA + U",
           "description": "Read previous line"
         },
         {
-          "keystroke": "Narrator + I",
+          "keystroke": "NA + I",
           "description": "Read current line"
         },
         {
-          "keystroke": "Narrator + Up Arrow",
+          "keystroke": "NA + Up Arrow",
           "description": "Read current line"
         },
         {
-          "keystroke": "Narrator + O",
+          "keystroke": "NA + O",
           "description": "Read next line"
         },
         {
-          "keystroke": "Narrator + J",
+          "keystroke": "NA + J",
           "description": "Read previous word"
         },
         {
-          "keystroke": "Ctrl + Narrator + Left Arrow",
+          "keystroke": "Ctrl + NA + Left Arrow",
           "description": "Read previous word"
         },
         {
-          "keystroke": "Narrator + K",
+          "keystroke": "NA + K",
           "description": "Read current word"
         },
         {
-          "keystroke": "Ctrl + Narrator + Num Pad 5",
+          "keystroke": "Ctrl + NA + Num Pad 5",
           "description": "Read current word"
         },
         {
-          "keystroke": "Narrator + L",
+          "keystroke": "NA + L",
           "description": "Read next word"
         },
         {
-          "keystroke": "Ctrl + Narrator + Right Arrow",
+          "keystroke": "Ctrl + NA + Right Arrow",
           "description": "Read next word"
         },
         {
-          "keystroke": "Narrator + M",
+          "keystroke": "NA + M",
           "description": "Read previous character"
         },
         {
-          "keystroke": "Narrator + Comma",
+          "keystroke": "NA + Comma",
           "description": "Read current character"
         },
         {
@@ -2443,39 +2475,39 @@
           "description": "Read current character"
         },
         {
-          "keystroke": "Narrator + Period",
+          "keystroke": "NA + Period",
           "description": "Read next character"
         },
         {
-          "keystroke": "Narrator + F",
+          "keystroke": "NA + F",
           "description": "Read next group of formatting information"
         },
         {
-          "keystroke": "Narrator + Shift + F",
+          "keystroke": "NA + Shift + F",
           "description": "Read previous group of formatting information"
         },
         {
-          "keystroke": "Narrator + B",
+          "keystroke": "NA + B",
           "description": "Move to beginning of text"
         },
         {
-          "keystroke": "Ctrl + Narrator + Home",
+          "keystroke": "Ctrl + NA + Home",
           "description": "Move to beginning of text"
         },
         {
-          "keystroke": "Narrator + E",
+          "keystroke": "NA + E",
           "description": "Move to end of text"
         },
         {
-          "keystroke": "Ctrl + Narrator + End",
+          "keystroke": "Ctrl + NA + End",
           "description": "Move to end of text"
         },
         {
-          "keystroke": "Narrator + Shift + Down Arrow",
+          "keystroke": "NA + Shift + Down Arrow",
           "description": "Read selection"
         },
         {
-          "keystroke": "Narrator + Shift + Down Arrow twice quickly",
+          "keystroke": "NA + Shift + Down Arrow twice quickly",
           "description": "Spell selection"
         },
         {
@@ -2535,83 +2567,83 @@
           "description": "Jump to cell contents"
         },
         {
-          "keystroke": "Narrator + Home",
+          "keystroke": "NA + Home",
           "description": "Move to first item in window"
         },
         {
-          "keystroke": "Narrator + End",
+          "keystroke": "NA + End",
           "description": "Move to last item in window"
         },
         {
-          "keystroke": "Narrator + Backspace",
+          "keystroke": "NA + Backspace",
           "description": "Go back one item"
         },
         {
-          "keystroke": "Narrator + N",
+          "keystroke": "NA + N",
           "description": "Move to main landmark"
         },
         {
-          "keystroke": "Narrator + Left Bracket",
+          "keystroke": "NA + Left Bracket",
           "description": "Move Narrator cursor to system cursor"
         },
         {
-          "keystroke": "Narrator + Num Pad Minus",
+          "keystroke": "NA + Num Pad Minus",
           "description": "Move Narrator cursor to system cursor"
         },
         {
-          "keystroke": "Narrator + Apostrophe",
+          "keystroke": "NA + Apostrophe",
           "description": "Set focus to item"
         },
         {
-          "keystroke": "Narrator + Num Pad Plus",
+          "keystroke": "NA + Num Pad Plus",
           "description": "Set focus to item"
         },
         {
-          "keystroke": "Narrator + A",
+          "keystroke": "NA + A",
           "description": "Jump to linked item"
         },
         {
-          "keystroke": "Narrator + Shift + A",
+          "keystroke": "NA + Shift + A",
           "description": "Jump to annotated content"
         },
         {
-          "keystroke": "Narrator + Alt + Up Arrow",
+          "keystroke": "NA + Alt + Up Arrow",
           "description": "Navigate to parent (when structural navigation is provided)"
         },
         {
-          "keystroke": "Narrator + Alt + Right Arrow",
+          "keystroke": "NA + Alt + Right Arrow",
           "description": "Navigate to next sibling (when structural navigation is provided)"
         },
         {
-          "keystroke": "Narrator + Alt + Left Arrow",
+          "keystroke": "NA + Alt + Left Arrow",
           "description": "Navigate to previous sibling (when structural navigation is provided)"
         },
         {
-          "keystroke": "Narrator + Alt + Down Arrow",
+          "keystroke": "NA + Alt + Down Arrow",
           "description": "Navigate to first child (when structural navigation is provided)"
         },
         {
-          "keystroke": "Narrator + F7",
+          "keystroke": "NA + F7",
           "description": "List of links"
         },
         {
-          "keystroke": "Narrator + F5",
+          "keystroke": "NA + F5",
           "description": "List of landmarks"
         },
         {
-          "keystroke": "Narrator + F6",
+          "keystroke": "NA + F6",
           "description": "List of headings"
         },
         {
-          "keystroke": "Narrator + Ctrl + F",
+          "keystroke": "NA + Ctrl + F",
           "description": "Narrator Find"
         },
         {
-          "keystroke": "Narrator + F3",
+          "keystroke": "NA + F3",
           "description": "Continue Find forward"
         },
         {
-          "keystroke": "Narrator + Shift + F3",
+          "keystroke": "NA + Shift + F3",
           "description": "Continue Find backward"
         }
       ]
@@ -2619,7 +2651,7 @@
     {
       "app": "VoiceOver",
       "appId": "screenreader.voiceover",
-      "note": "VoiceOver key is Control + Option or Caps Lock by default",
+      "note": "VoiceOver (VO) key is Control + Option or Caps Lock by default",
       "manualUrl": "https://support.apple.com/en-gb/guide/voiceover/vo14111/mac",
       "commands": [
         {
@@ -3868,10 +3900,12 @@
   var resultsEl = document.getElementById("results");
   var countEl = document.getElementById("count");
   var copiedEl = document.getElementById("copied");
+  var expandButton = document.getElementById("expand");
   var readers = [];
   var allShortcuts = [];
   var textQuery = "";
   var chord = null;
+  var collapsedSections = /* @__PURE__ */ new Set();
   var heldKeys = /* @__PURE__ */ new Map();
   var fnHeld = false;
   var chordEscapePresses = 0;
@@ -4046,7 +4080,8 @@
       const nextId = `h-${rendered[(index + 1) % rendered.length].group.appId}`;
       const isLast = index === rendered.length - 1;
       const skipLabel = isLast ? "Jump to first section" : "Jump to next section";
-      return `<details class="segment" open aria-labelledby="h-${group.appId}">
+      const open = collapsedSections.has(group.appId) && !isFiltering() ? "" : " open";
+      return `<details class="segment"${open} data-app-id="${escapeHtml(group.appId)}" aria-labelledby="h-${group.appId}">
           <summary class="segment-head">
             <span class="caret" aria-hidden="true"></span>
             <h2 class="segment-title" id="h-${group.appId}">${escapeHtml(group.app)}</h2>
@@ -4155,6 +4190,29 @@
     if (!button) return;
     event.preventDefault();
     activateRow(button, copyModeFor(event));
+  });
+  expandButton.addEventListener("click", () => {
+    const ids = [...resultsEl.querySelectorAll("details.segment")].map((el) => el.dataset.appId).filter(Boolean);
+    if (ids.length === 0) return;
+    const allExpanded = ids.every((id) => !collapsedSections.has(id));
+    if (allExpanded) {
+      for (const id of ids) collapsedSections.add(id);
+    } else {
+      collapsedSections.clear();
+    }
+    render();
+  });
+  resultsEl.addEventListener("click", (event) => {
+    const summary = event.target.closest("summary");
+    if (!summary) return;
+    const details = summary.parentElement;
+    if (!(details instanceof HTMLDetailsElement)) return;
+    const id = details.dataset.appId;
+    if (!id) return;
+    queueMicrotask(() => {
+      if (details.open) collapsedSections.delete(id);
+      else collapsedSections.add(id);
+    });
   });
   function heldDisplay(mods) {
     const parts = mods.map((m) => {

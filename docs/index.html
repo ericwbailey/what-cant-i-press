@@ -12,21 +12,21 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="What Can't I Press?">
     <meta name="application-name" content="What Can't I Press?">
-    <meta name="description" content="Keyboard commands reserved by JAWS, NVDA, Narrator, and VoiceOver.">
-    <meta name="subject" content="Keyboard commands reserved by JAWS, NVDA, Narrator, and VoiceOver.">
+    <meta name="description" content="Keyboard commands reserved by JAWS, NVDA, Narrator, VoiceOver, and Orca.">
+    <meta name="subject" content="Keyboard commands reserved by JAWS, NVDA, Narrator, VoiceOver, and Orca.">
 
     <link rel="icon" sizes="192x192" href="/favicon.ico">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
     <meta property="twitter:title" content="What Can't I Press?">
-    <meta property="twitter:description" content="Keyboard commands reserved by JAWS, NVDA, Narrator, and VoiceOver.">
+    <meta property="twitter:description" content="Keyboard commands reserved by JAWS, NVDA, Narrator, VoiceOver, and Orca.">
     <meta property="twitter:image" content="/social-media-preview.png">
     <meta property="twitter:site" content="https://what-cant-i-press.app">
     <meta property="twitter:card" content="summary_large_image">
     <meta property="og:title" content="What Can't I Press?">
     <meta property="og:site_name" content="What Can't I Press?">
-    <meta property="og:description" content="Keyboard commands reserved by JAWS, NVDA, Narrator, and VoiceOver.">
+    <meta property="og:description" content="Keyboard commands reserved by JAWS, NVDA, Narrator, VoiceOver, and Orca.">
     <meta property="og:image" content="/social-media-preview.png">
     <meta property="og:url" content="https://what-cant-i-press.app">
     <meta property="og:locale" content="en_US">
@@ -37,7 +37,7 @@
       <div class="page-head-lockup">
         <div class="page-head-info">
           <h1>What Can't I Press?</h1>
-          <p class="lede">Keyboard commands reserved by JAWS, NVDA, Narrator, and VoiceOver. Hold <kbd class="kbd-secondary">Control</kbd> or <kbd class="kbd-secondary">Shift</kbd> to modify what is copied to the clipboard.</p>
+          <p class="lede">Keyboard commands reserved by JAWS, NVDA, Narrator, VoiceOver, and Orca. Hold <kbd class="kbd-secondary">Control</kbd> or <kbd class="kbd-secondary">Shift</kbd> to modify what is copied to the clipboard.</p>
         </div>
         <div class="page-head-download">
           <a class="download" href="https://github.com/ericwbailey/what-cant-i-press/releases/latest">
@@ -90,10 +90,18 @@
           <div class="input-hint" id="chord-hint">Press <kbd class="kbd-secondary">Escape</kbd> twice or <kbd class="kbd-secondary">Shift</kbd>&ThinSpace;+&ThinSpace;<kbd class="kbd-secondary">Tab</kbd>&ThinSpace;+&ThinSpace;<kbd class="kbd-secondary">Tab</kbd> to move focus out of this input.</div>
         </div>
       </div>
-      <p id="count" class="results-status"></p>
       <p id="copied" class="copied"></p>
 
+      <div class="result-bar">
+        <p id="count" class="results-status"></p>
+        <button id="expand" class="result-toggle" type="button">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+          Expand/Collapse All
+        </button>
+      </div>
       <div id="results"></div>
+
+      <a class="hide-visually" href="#footer">Skip keyboard shortcut lists</a>
     </main>
 
     <footer id="footer" class="footer">

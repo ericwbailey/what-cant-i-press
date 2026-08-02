@@ -302,6 +302,54 @@ input[type='text'] {
   margin-bottom: 1rem;
 }
 
+.result-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-medium);
+}
+
+.result-bar .results-status {
+  flex: 1;
+  min-width: 0;
+}
+
+.result-toggle {
+  align-items: center;
+  appearance: none;
+  display: inline-flex;
+  background: transparent;
+  border: 1px solid var(--color-surface-bar);
+  border-radius: var(--border-radius-small);
+  color: var(--text-dim);
+  cursor: pointer;
+  flex: none;
+  font-size: var(--font-size-2);
+  gap: var(--gap-small);
+  padding: 0.25rem 0.5rem;
+  transition: 
+    color 150ms ease, 
+    border-color 250ms ease, 
+    background-color 250ms ease;
+
+  & svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+
+  &:hover {
+    color: var(--text);
+    border-color: var(--border);
+    background: var(--fill-subtle);
+  }
+
+  &:active {
+    background-color: var(--color-text-dim);
+    color: var(--color-bg);
+    transition: none;
+  }
+}
+
 /* MARK: Rows */
 .row.pressed kbd,
 .row.pressed .kbd-plus,
@@ -321,6 +369,10 @@ input[type='text'] {
 
   &::-webkit-details-marker {
     display: none;
+  }
+
+  &:focus-visible {
+    outline-offset: 6px;
   }
 }
 
