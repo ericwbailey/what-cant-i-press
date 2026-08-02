@@ -314,25 +314,37 @@ function setScanning(active: boolean): void {
 /**
  * Symmetric text-alias groups. Typing any term in a group filters for shortcuts
  * whose text contains ANY term in the group. Modifier groups include the on-screen
- * macOS symbol (⌘ ⌥ ⌃; `fn` is already the displayed function label) so
+ * macOS symbol (⌃ ⌥ ⇧ ⌘; `fn` is already the displayed function label) so
  * "cmd"/"command" surface ⌘ shortcuts — regular Mac shortcuts display the glyph,
- * never the word. Key groups pair a key name with its symbol and abbreviations.
+ * never the word. `alt` is the Windows label for Option, so it is grouped with
+ * ⌥/opt/option to bridge platforms. Key groups pair a key name with its macOS
+ * glyph (↩ ⌅ ⎋ ⇥ ⌫ ⌦ ↖ ↘ ⇞ ⇟ ⌧) and common abbreviations. The final group
+ * bridges settings/preferences wording in descriptions across platforms, not keys.
  */
 const TEXT_ALIAS_GROUPS: readonly (readonly string[])[] = [
   ['fn', 'function'],
   ['ctrl', 'control', '⌃'],
-  ['opt', 'option', '⌥'],
+  ['alt', 'opt', 'option', '⌥'],
+  ['shift', '⇧'],
   ['cmd', 'command', '⌘'],
   ['caps', 'caps lock'],
-  ['return', '⏎'],
-  ['enter', '⌤'],
+  ['win', 'windows'],
+  ['return', 'enter', '↩', '⌅'],
+  ['esc', 'escape', '⎋'],
+  ['tab', '⇥'],
+  ['space', 'spacebar'],
   ['delete', 'backspace', '⌫'],
-  ['up', 'u', '↑'],
-  ['down', 'dwn', 'd', '↓'],
-  ['left', 'lft', 'l', '←'],
-  ['right', 'rght', 'r', '→'],
-  ['page up', 'pg up', 'pgup'],
-  ['page down', 'pg dn', 'pg down', 'pgdn']
+  ['del', 'forward delete', '⌦'],
+  ['up', '↑'],
+  ['down', 'dwn', '↓'],
+  ['left', 'lft', '←'],
+  ['right', 'rght', '→'],
+  ['home', '↖'],
+  ['end', '↘'],
+  ['page up', 'pg up', 'pgup', '⇞'],
+  ['page down', 'pg dn', 'pg down', 'pgdn', '⇟'],
+  ['clear', '⌧'],
+  ['settings', 'preferences', 'prefs']
 ]
 
 /**
@@ -355,50 +367,114 @@ const READER_KEY_ALIASES: readonly { triggers: readonly string[]; comboTerms: re
   ]
 
 /**
- * Collapses the spaced `" + "` combo separator (and any run of whitespace) to a
- * single space, so a typed space matches the separator: `om space` is treated
- * the same as `om + space`. Only the spaced separator collapses — bare
- * `+`-joined labels (Windows/Linux OS combos) and multi-word key names
- * ("Num Pad Plus", "Page Up") are preserved. Input is expected pre-lowercased.
+ * Collapses combo separators to a single space so typed separators are
+ * interchangeable: a plain space, `" + "`, a bare `+` between keys, and the
+ * `", then "` sequence connective all resolve alike. So `om space` == `om + space`,
+ * `ctrl shift a` finds a stored `Ctrl+Shift+A`, and `insert spacebar s` finds
+ * `Insert + Spacebar, then S`. A bare `+` folds only between two word characters,
+ * so the literal `+` key (Windows `Win++` Magnifier) and the `,` key (`Ctrl+,`
+ * Open settings) survive as searchable tokens — only their separators collapse.
+ * Plain `,` is deliberately not folded (it is a key), only the `", then "`
+ * connective is. Multi-word key names ("Num Pad Plus", "Page Up") are preserved.
+ * Input is expected pre-lowercased.
  */
 function normalizeSeparators(s: string): string {
-  return s.replace(/ \+ /g, ' ').replace(/\s+/g, ' ').trim()
+  return s
+    .replace(/, then /g, ' ')
+    .replace(/ \+ /g, ' ')
+    .replace(/(?<=\w)\+(?=\w)/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
-type QueryClause = { term: string; comboOnly: boolean }
+/**
+ * Whole-query aliases resolving an ambiguous screen-reader short-form to that
+ * reader's `appName`. Unlike READER_KEY_ALIASES — which ADD combo matches on top
+ * of the substring search — a name alias REPLACES the broad substring base clause
+ * (see queryClauses). Reserved for tokens too short to substring-match safely:
+ * "na" (the Narrator key, shown as "NA" in combos) would otherwise bleed into
+ * unrelated words ("navigatioN", "reNAme"), so it is pinned to the Narrator rows
+ * exactly. The full word "narrator" is deliberately NOT listed — it stays a
+ * default word-level text match, so it also surfaces related rows such as the
+ * Windows "Turn on Narrator" global shortcut.
+ */
+const READER_NAME_ALIASES: readonly { triggers: readonly string[]; appName: string }[] = [
+  { triggers: ['na'], appName: 'Narrator' }
+]
+
+type QueryClause =
+  | { kind: 'text'; term: string }
+  | { kind: 'combo'; term: string }
+  | { kind: 'app'; appName: string }
 
 /**
- * Expands a filter query into substring clauses: the query itself, plus
- * modifier-group synonyms (matched against the full text) and reader-key terms
- * (matched against the combo label only). The base query is separator-normalized
- * so a typed space matches `" + "` (see normalizeSeparators); reader-key alias
- * terms stay raw so they keep matching the literal `" + "`-delimited combo.
+ * Expands a filter query into match clauses: the query itself (substring over
+ * the full text), plus modifier-group synonyms (also full-text) and reader-key
+ * terms (combo label only). The base query is separator-normalized so a typed
+ * space matches `" + "` (see normalizeSeparators); reader-key alias terms stay
+ * raw so they keep matching the literal `" + "`-delimited combo. A whole-query
+ * reader-name alias (READER_NAME_ALIASES) short-circuits to a single app-name
+ * clause, replacing the broad substring match so the short-form stays precise.
  */
 function queryClauses(query: string): QueryClause[] {
   const key = normalizeSeparators(query)
-  const clauses: QueryClause[] = [{ term: key, comboOnly: false }]
+  for (const alias of READER_NAME_ALIASES) {
+    if (alias.triggers.includes(key)) return [{ kind: 'app', appName: alias.appName.toLowerCase() }]
+  }
+  const clauses: QueryClause[] = [{ kind: 'text', term: key }]
   for (const group of TEXT_ALIAS_GROUPS) {
     if (group.includes(key)) {
-      for (const term of group) if (term !== key) clauses.push({ term, comboOnly: false })
+      for (const term of group) if (term !== key) clauses.push({ kind: 'text', term })
     }
   }
   for (const alias of READER_KEY_ALIASES) {
     if (alias.triggers.includes(key)) {
-      for (const term of alias.comboTerms) clauses.push({ term, comboOnly: true })
+      for (const term of alias.comboTerms) clauses.push({ kind: 'combo', term })
     }
   }
   return clauses
 }
 
-function matchesQuery(shortcut: Shortcut, clauses: QueryClause[]): boolean {
+/**
+ * Per-shortcut search text, derived once from the shortcut's immutable display
+ * fields and memoized. Filtering re-runs over the whole row set on every
+ * keystroke, so normalizing each haystack per keystroke is pure waste. Keyed on
+ * the Shortcut object — scans/data loads produce fresh objects, so superseded
+ * entries are garbage-collected.
+ * - `combo`: lowercased raw comboLabel. Combo-kind clauses test this verbatim,
+ *   so the literal `" + "` reader delimiters survive (they are not normalized).
+ * - `appName`: lowercased appName, for the app-kind exact match.
+ * - `hay`: separator-normalized `combo + appName + description`, for text-kind.
+ */
+interface SearchText {
+  combo: string
+  appName: string
+  hay: string
+}
+const searchTextCache = new WeakMap<Shortcut, SearchText>()
+function searchTextFor(shortcut: Shortcut): SearchText {
+  const cached = searchTextCache.get(shortcut)
+  if (cached) return cached
   const combo = shortcut.comboLabel.toLowerCase()
-  const normHaystack = normalizeSeparators(
-    `${combo} ${(shortcut.appName ?? '').toLowerCase()} ${(shortcut.description ?? '').toLowerCase()}`
+  const appName = (shortcut.appName ?? '').toLowerCase()
+  const hay = normalizeSeparators(
+    `${combo} ${appName} ${(shortcut.description ?? '').toLowerCase()}`
   )
+  const text: SearchText = { combo, appName, hay }
+  searchTextCache.set(shortcut, text)
+  return text
+}
+
+function matchesQuery(shortcut: Shortcut, clauses: QueryClause[]): boolean {
+  const { combo, appName, hay } = searchTextFor(shortcut)
   for (const clause of clauses) {
-    if (clause.comboOnly ? combo.includes(clause.term) : normHaystack.includes(clause.term)) {
-      return true
-    }
+    const hit =
+      clause.kind === 'combo'
+        ? combo.includes(clause.term)
+        : clause.kind === 'app'
+          ? appName === clause.appName
+          : hay.includes(clause.term)
+    if (hit) return true
   }
   return false
 }
