@@ -46,7 +46,7 @@ What Can’t I Press? lives in your macOS menu bar or Windows system tray. Click
 ### Scan to discover shortcuts
 
 - Detect shortcuts in the app you had open prior to opening What Can’t I Press?, or
-- Scan all currently open apps.
+- Scan all currently open apps. The full "scan all apps" sweep briefly brings each running app to the foreground to read its menus, then restores focus to where it started.
 
 ### Search and filter
 
@@ -76,18 +76,7 @@ Download the latest installer from the [Releases page](https://github.com/ericw
 
 The app uses the Accessibility API to scan, which requires explicit permission. It will guide you to enabling this the first time a scan is run.
 
-Here is how to enable it manually:
-
-1. Open **System Settings** → **Privacy & Security** → **Accessibility**.
-2. Enable **What Can't I Press**.
-3. Reopen the app and scan again.
-
-If the app is already listed and enabled but scanning still reports that
-Accessibility access is needed—which can happen after installing an update—remove
-the **What Can't I Press** entry with the **–** button, add the app again, enable
-it, then reopen and scan.
-
-The full "scan all apps" sweep briefly brings each running app to the foreground to read its menus, then restores focus to where it started.
+You may need to [manually re-add app permissions in certain circumstances](https://github.com/ericwbailey/what-cant-i-press#why-isnt-the-app-detecting-keyboard-shortcuts-on-macos-even-after-i-gave-it-accessibility-permissions).
 
 #### Windows
 
