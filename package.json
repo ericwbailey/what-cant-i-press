@@ -32,11 +32,11 @@
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
-    "electron": "^43.5.0",
+    "electron": "^43.8.1",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "typescript": "^7.0.2",
-    "vite": "^7.3.6"
+    "vite": "^7.3.8"
   },
   "dependencies": {
     "electron-updater": "^6.8.9",
